@@ -1,0 +1,11 @@
+[offset 0] Checking RDB file empty.rdb
+[offset 26] AUX FIELD redis-ver = '7.2.5'
+[offset 40] AUX FIELD redis-bits = '64'
+[offset 52] AUX FIELD ctime = '1793453815'
+[offset 67] AUX FIELD used-mem = '673893'
+[offset 79] AUX FIELD aof-base = '0'
+[offset 88] Checksum OK
+[offset 88] \o/ RDB looks OK! \o/
+[info] 0 keys read
+[info] 0 expires
+[info] 0 already expired

@@ -1,0 +1,76 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Noverberrain/moonrdb"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn parse_empty(Bytes, max_input_bytes? : Int32, max_string_bytes? : Int32, max_metadata_entries? : Int32) -> EmptySnapshot raise ParseError
+
+pub fn read_header(Bytes, max_input_bytes? : Int32) -> Int32 raise ParseError
+
+// Errors
+pub(all) suberror ParseError {
+  InvalidInputLimit(offset~ : Int32, limit~ : Int32)
+  InputTooLarge(offset~ : Int32, size~ : Int32, limit~ : Int32)
+  UnexpectedEnd(offset~ : Int32, needed~ : UInt64, remaining~ : Int32)
+  InvalidMagic(offset~ : Int32)
+  InvalidVersionDigit(offset~ : Int32)
+  UnsupportedVersion(offset~ : Int32, version~ : Int32)
+  InvalidLengthTag(offset~ : Int32, tag~ : Byte)
+  InvalidStringEncoding(offset~ : Int32, encoding~ : Int32)
+  UnexpectedEncodedLength(offset~ : Int32)
+  InvalidResourceLimit(offset~ : Int32, resource~ : String, limit~ : Int32)
+  ResourceLimitExceeded(offset~ : Int32, resource~ : String, limit~ : UInt64, actual~ : UInt64)
+  UnsupportedStringEncoding(offset~ : Int32, encoding~ : Int32)
+  UnsupportedObjectType(offset~ : Int32, object_type~ : Byte)
+  UnsupportedOpcode(offset~ : Int32, opcode~ : Byte)
+  DuplicateKeyMetadata(offset~ : Int32, opcode~ : Byte)
+  DanglingKeyMetadata(offset~ : Int32)
+  ChecksumMismatch(offset~ : Int32, stored~ : UInt64, computed~ : UInt64)
+  TrailingData(offset~ : Int32, remaining~ : Int32)
+} derive(@debug.Debug)
+pub fn ParseError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) struct AuxField {
+  key : Bytes
+  value : Bytes
+} derive(Eq, @debug.Debug)
+pub fn AuxField::equal(Self, Self) -> Bool
+pub fn AuxField::not_equal(Self, Self) -> Bool
+pub fn AuxField::to_repr(Self) -> @debug.Repr
+
+pub(all) enum ChecksumStatus {
+  Valid(UInt64)
+  Disabled
+} derive(Eq, @debug.Debug)
+pub fn ChecksumStatus::equal(Self, Self) -> Bool
+pub fn ChecksumStatus::not_equal(Self, Self) -> Bool
+pub fn ChecksumStatus::to_repr(Self) -> @debug.Repr
+
+pub(all) struct DatabaseSizeHint {
+  database : UInt64
+  keys : UInt64
+  expires : UInt64
+} derive(Eq, @debug.Debug)
+pub fn DatabaseSizeHint::equal(Self, Self) -> Bool
+pub fn DatabaseSizeHint::not_equal(Self, Self) -> Bool
+pub fn DatabaseSizeHint::to_repr(Self) -> @debug.Repr
+
+pub(all) struct EmptySnapshot {
+  format_version : Int32
+  aux_fields : Array[AuxField]
+  database_selections : Array[UInt64]
+  resize_hints : Array[DatabaseSizeHint]
+  checksum : ChecksumStatus
+  file_size : Int32
+} derive(Eq, @debug.Debug)
+pub fn EmptySnapshot::equal(Self, Self) -> Bool
+pub fn EmptySnapshot::not_equal(Self, Self) -> Bool
+pub fn EmptySnapshot::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
