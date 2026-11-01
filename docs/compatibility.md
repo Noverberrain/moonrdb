@@ -1,6 +1,6 @@
-# 兼容矩阵（F3）
+# 兼容矩阵（F4）
 
-当前 `parse_strings` 支持文件结构与 String 对象，普通、整数及 LZF 编码可解码。其他逻辑类型仍未实现。原 `parse_empty` 保留 F2 边界：拒绝对象及 AUX LZF。
+通用 `parse` 支持文件结构、String 与 Hash。`parse_strings` 仍只接受 String；原 `parse_empty` 保留 F2 边界：拒绝对象及 AUX LZF。List、Set、Sorted Set 等尚未实现。
 
 ## 固定的格式依据
 
@@ -18,8 +18,8 @@
 | 逻辑类型 | RDB 标记 | 保存表示 / 上游依据 | 计划 | 当前解析 / 真实对象样本 |
 |---|---|---|---|---|
 | String | 0 | STRING；rdbSaveObjectType / rdbSaveObject | F3 | 已实现 / 真实普通、二进制、空值、INT8/16/32、LZF 键与值通过 |
-| Hash | 4 | HASH，普通键值对 | F4 | 未实现 / 无 |
-| Hash | 16 | HASH_LISTPACK | F4 | 未实现 / 无 |
+| Hash | 4 | HASH，普通键值对 | F4 | 已实现 / 真实超条目阈值、长字段与长值样本通过 |
+| Hash | 16 | HASH_LISTPACK | F4 | 已实现 / 真实紧凑 Hash、整数／二进制、LZF 容器样本通过 |
 | List | 18 | LIST_QUICKLIST_2；节点区分 plain / packed，packed 为 listpack | F5 | 未实现 / 无 |
 | Set | 2 | SET，普通元素序列 | F6 | 未实现 / 无 |
 | Set | 11 | SET_INTSET | F6 | 未实现 / 无 |
@@ -32,6 +32,8 @@
 
 F1 的长度／整数测试保留。F3 已验证 String 完整解码、LZF 字面量与重叠／非重叠回引用、扩展长度、最大回溯距离，以及解压和累计解码预算。详情见 [strings.md](strings.md)。
 
+F4 已验证 listpack 字符串长度表示、7 位无符号及 13 / 16 / 24 / 32 / 64 位有符号整数、总字节数、元素数（含未知计数 65535）、反向长度和 EOF。Hash 还检查配对、重复字段及资源限制；历史 zipmap / ziplist 不在支持范围。详见 [hashes.md](hashes.md)。
+
 ## 文件结构
 
 | 内容 | 标记 / 定义 | 计划 | 当前状态 |
@@ -40,11 +42,11 @@ F1 的长度／整数测试保留。F3 已验证 String 完整解码、LZF 字�
 | AUX 辅助字段 | 250 | F2/F3 | 普通／整数有真实样本；LZF 仅 parse_strings 支持，合成测试通过 |
 | SELECTDB / RESIZEDB | 254 / 251 | F2/F3 | 合成测试与真实 DB 0 / 2 的 String 样本通过 |
 | EXPIRETIME / EXPIRETIME_MS | 253 / 252 | F2/F3 | 毫秒时间有真实 String 样本；旧秒编码仅有小端合成测试 |
-| IDLE / FREQ | 248 / 249 | F2/F3 | IDLE 有真实 String 样本；FREQ 仅合成测试 |
-| EOF 与 CRC64 | 255 + 8 字节校验和 | F2/F3 | 三份真实快照通过；有效与关闭状态可区分，损坏／截断被拒绝 |
+| IDLE / FREQ | 248 / 249 | F2/F3/F4 | IDLE 有真实 String 样本；FREQ 有真实 Hash 样本 |
+| EOF 与 CRC64 | 255 + 8 字节校验和 | F2/F3/F4 | 四份真实快照通过；有效与关闭状态可区分，损坏／截断被拒绝 |
 | FUNCTION2 / FUNCTION_PRE_GA / MODULE_AUX | 245 / 246 / 247 | 首版范围外 | 未实现；暂无样本 |
 
-样本来源、SHA256 和复现方式见 [fixtures/README.md](../fixtures/README.md)。Python 离线验证核对样本身份和预期数据；MoonBit 测试解析两份真实空库及一份真实 String 快照，检查 CRC64 或关闭状态。
+样本来源、SHA256 和复现方式见 [fixtures/README.md](../fixtures/README.md)。Python 离线验证核对样本身份和预期数据；MoonBit 测试解析两份空库、一份 String 快照及一份混合 Hash 快照，检查语义、编码及校验状态。
 
 ## 工具链与执行环境
 

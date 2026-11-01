@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn parse(Bytes, max_input_bytes? : Int32, max_string_bytes? : Int32, max_metadata_entries? : Int32, max_records? : Int32, max_decoded_bytes? : Int32, max_hash_entries? : Int32, max_packed_bytes? : Int32) -> Snapshot raise ParseError
+
 pub fn parse_empty(Bytes, max_input_bytes? : Int32, max_string_bytes? : Int32, max_metadata_entries? : Int32) -> EmptySnapshot raise ParseError
 
 pub fn parse_strings(Bytes, max_input_bytes? : Int32, max_string_bytes? : Int32, max_metadata_entries? : Int32, max_records? : Int32, max_decoded_bytes? : Int32) -> StringSnapshot raise ParseError
@@ -33,6 +35,8 @@ pub(all) suberror ParseError {
   ChecksumMismatch(offset~ : Int32, stored~ : UInt64, computed~ : UInt64)
   TrailingData(offset~ : Int32, remaining~ : Int32)
   InvalidLzf(offset~ : Int32, reason~ : String)
+  InvalidHash(offset~ : Int32, reason~ : String)
+  InvalidListpack(offset~ : Int32, inner_offset~ : Int32, reason~ : String)
 } derive(@debug.Debug)
 pub fn ParseError::to_repr(Self) -> @debug.Repr
 
@@ -73,6 +77,62 @@ pub(all) struct EmptySnapshot {
 pub fn EmptySnapshot::equal(Self, Self) -> Bool
 pub fn EmptySnapshot::not_equal(Self, Self) -> Bool
 pub fn EmptySnapshot::to_repr(Self) -> @debug.Repr
+
+pub(all) struct HashEntry {
+  field : Bytes
+  value : Bytes
+} derive(Eq, @debug.Debug)
+pub fn HashEntry::equal(Self, Self) -> Bool
+pub fn HashEntry::not_equal(Self, Self) -> Bool
+pub fn HashEntry::to_repr(Self) -> @debug.Repr
+
+pub(all) struct HashRecord {
+  database : UInt64
+  key : Bytes
+  key_storage : StringStorage
+  entries : Array[HashEntry]
+  storage : HashStorage
+  packed_storage : StringStorage?
+  expires_at_ms : Int64?
+  idle_seconds : UInt64?
+  frequency : Byte?
+  record_start : Int32
+  record_end : Int32
+  serialized_bytes : UInt64
+} derive(Eq, @debug.Debug)
+pub fn HashRecord::equal(Self, Self) -> Bool
+pub fn HashRecord::not_equal(Self, Self) -> Bool
+pub fn HashRecord::to_repr(Self) -> @debug.Repr
+
+pub(all) enum HashStorage {
+  Hashtable
+  Listpack
+} derive(Eq, @debug.Debug)
+pub fn HashStorage::equal(Self, Self) -> Bool
+pub fn HashStorage::not_equal(Self, Self) -> Bool
+pub fn HashStorage::to_repr(Self) -> @debug.Repr
+
+pub(all) enum RdbRecord {
+  String(StringRecord)
+  Hash(HashRecord)
+} derive(Eq, @debug.Debug)
+pub fn RdbRecord::equal(Self, Self) -> Bool
+pub fn RdbRecord::not_equal(Self, Self) -> Bool
+pub fn RdbRecord::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Snapshot {
+  format_version : Int32
+  aux_fields : Array[AuxField]
+  database_selections : Array[UInt64]
+  resize_hints : Array[DatabaseSizeHint]
+  records : Array[RdbRecord]
+  checksum : ChecksumStatus
+  file_size : Int32
+  global_overhead_bytes : UInt64
+} derive(Eq, @debug.Debug)
+pub fn Snapshot::equal(Self, Self) -> Bool
+pub fn Snapshot::not_equal(Self, Self) -> Bool
+pub fn Snapshot::to_repr(Self) -> @debug.Repr
 
 pub(all) struct StringRecord {
   database : UInt64

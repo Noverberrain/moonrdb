@@ -1,0 +1,13 @@
+[offset 0] Checking RDB file hashes.rdb
+[offset 26] AUX FIELD redis-ver = '7.2.5'
+[offset 40] AUX FIELD redis-bits = '64'
+[offset 52] AUX FIELD ctime = '1793505708'
+[offset 67] AUX FIELD used-mem = '900360'
+[offset 79] AUX FIELD aof-base = '0'
+[offset 81] Selecting DB ID 0
+[offset 319] Selecting DB ID 2
+[offset 502] Checksum OK
+[offset 502] \o/ RDB looks OK! \o/
+[info] 9 keys read
+[info] 1 expires
+[info] 0 already expired

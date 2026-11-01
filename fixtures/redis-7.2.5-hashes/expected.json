@@ -1,0 +1,169 @@
+[
+  {
+    "type": "hash",
+    "database": 0,
+    "key_base64": "Y29tcGFjdA==",
+    "fields": [
+      {
+        "field_base64": "bmFtZQ==",
+        "value_base64": "YWxpY2U="
+      },
+      {
+        "field_base64": "YWdl",
+        "value_base64": "NDI="
+      },
+      {
+        "field_base64": "AP8=",
+        "value_base64": "gAA="
+      },
+      {
+        "field_base64": "",
+        "value_base64": ""
+      }
+    ],
+    "expires_at_ms": null,
+    "expected_storage": "listpack"
+  },
+  {
+    "type": "hash",
+    "database": 0,
+    "key_base64": "Y291bnQtb3ZlcmZsb3c=",
+    "fields": [
+      {
+        "field_base64": "ZjA=",
+        "value_base64": "djA="
+      },
+      {
+        "field_base64": "ZjE=",
+        "value_base64": "djE="
+      },
+      {
+        "field_base64": "ZjI=",
+        "value_base64": "djI="
+      },
+      {
+        "field_base64": "ZjM=",
+        "value_base64": "djM="
+      },
+      {
+        "field_base64": "ZjQ=",
+        "value_base64": "djQ="
+      }
+    ],
+    "expires_at_ms": null,
+    "expected_storage": "hashtable"
+  },
+  {
+    "type": "hash",
+    "database": 0,
+    "key_base64": "bG9uZy12YWx1ZQ==",
+    "fields": [
+      {
+        "field_base64": "cGF5bG9hZA==",
+        "value_base64": "eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA=="
+      }
+    ],
+    "expires_at_ms": null,
+    "expected_storage": "hashtable"
+  },
+  {
+    "type": "hash",
+    "database": 0,
+    "key_base64": "bG9uZy1maWVsZA==",
+    "fields": [
+      {
+        "field_base64": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmY=",
+        "value_base64": "dg=="
+      }
+    ],
+    "expires_at_ms": null,
+    "expected_storage": "hashtable"
+  },
+  {
+    "type": "hash",
+    "database": 0,
+    "key_base64": "a2V5OktLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0s=",
+    "fields": [
+      {
+        "field_base64": "Zg==",
+        "value_base64": "dg=="
+      }
+    ],
+    "expires_at_ms": null,
+    "expected_storage": "listpack"
+  },
+  {
+    "type": "hash",
+    "database": 2,
+    "key_base64": "aW50cw==",
+    "fields": [
+      {
+        "field_base64": "LTQwOTY=",
+        "value_base64": "NDA5NQ=="
+      },
+      {
+        "field_base64": "LTMyNzY4",
+        "value_base64": "MzI3Njc="
+      },
+      {
+        "field_base64": "LTgzODg2MDg=",
+        "value_base64": "ODM4ODYwNw=="
+      },
+      {
+        "field_base64": "LTkyMjMzNzIwMzY4NTQ3NzU4MDg=",
+        "value_base64": "OTIyMzM3MjAzNjg1NDc3NTgwNw=="
+      }
+    ],
+    "expires_at_ms": 4102444800123,
+    "expected_storage": "listpack"
+  },
+  {
+    "type": "hash",
+    "database": 2,
+    "key_base64": "aW50czI=",
+    "fields": [
+      {
+        "field_base64": "LTIxNDc0ODM2NDg=",
+        "value_base64": "MjE0NzQ4MzY0Nw=="
+      },
+      {
+        "field_base64": "MTI3",
+        "value_base64": "MTI4"
+      }
+    ],
+    "expires_at_ms": null,
+    "expected_storage": "listpack"
+  },
+  {
+    "type": "hash",
+    "database": 2,
+    "key_base64": "cGFja2VkLWx6Zg==",
+    "fields": [
+      {
+        "field_base64": "ZjA=",
+        "value_base64": "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFh"
+      },
+      {
+        "field_base64": "ZjE=",
+        "value_base64": "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJi"
+      },
+      {
+        "field_base64": "ZjI=",
+        "value_base64": "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2Nj"
+      },
+      {
+        "field_base64": "ZjM=",
+        "value_base64": "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRk"
+      }
+    ],
+    "expires_at_ms": null,
+    "expected_storage": "listpack"
+  },
+  {
+    "type": "string",
+    "database": 0,
+    "key_base64": "bWFya2Vy",
+    "value_base64": "bWl4ZWQ=",
+    "expires_at_ms": null
+  }
+]

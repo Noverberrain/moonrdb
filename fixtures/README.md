@@ -1,4 +1,4 @@
-# 真实快照样本（F0 / F2 / F3）
+# 真实快照样本（F0—F4）
 
 `redis-7.2.5/empty.rdb` 是专用 Redis 7.2.5 实例执行 `SAVE` 的原始产物，未手工拼接或修改。
 
@@ -17,6 +17,10 @@ F3 新增 `redis-7.2.5-strings/strings.rdb`，使用同一构建、开启压缩�
 
 String 生成流程在 SAVE 前核对键值，SAVE 后通过 `redis-check-rdb` 确认完整性，再启动第二个隔离进程加载同一文件，对所有键核对 GET 与 PEXPIRETIME。该流程验证真实持久化语义，MoonBit 测试另外检查解析结果及实际 RDB 编码；不能从 Redis 内存对象编码推断文件编码。
 
+F4 新增 `redis-7.2.5-hashes/hashes.rdb`，502 字节，SHA256 为 `252fd1e57b9a5874298b869d2933cbea8a59fe12213f4a9af151e5613ebec440`。采用同一已核验构建，固定紧凑阈值为 4 个字段对／64 字节字段或值，使用 allkeys-lfu。8 个 Hash 覆盖小对象、超条目阈值、超字段／值长度阈值、普通与压缩 listpack、二进制／空字段、整数极值、到期时间；另有 1 个混合 String。构造依据是 `scripts/hash_dataset.py`；Base64 预期数据及其哈希保存在对应目录。
+
+Hash 数据经过 SAVE、Redis 完整性检查、隔离重新加载与逐键 HLEN / HGET / GET / PEXPIRETIME 对照，现有样本也单独重新加载复核。MoonBit 再检查实际 RDB 编码、无序字段语义及记录体积。运行时 OBJECT ENCODING 只用于核对生成阈值效果，不能代替 RDB 类型验证。
+
 ## 生成方法
 
 下载、核对归档哈希并解压后，在仓库根目录运行（把路径换成实际位置）：
@@ -25,6 +29,7 @@ String 生成流程在 SAVE 前核对键值，SAVE 后通过 `redis-check-rdb` �
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --output-dir .work/empty-regenerated
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --checksum disabled --output-dir .work/empty-no-checksum-regenerated
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset strings --policy allkeys-lru --output-dir .work/strings-regenerated
+python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset hashes --policy allkeys-lfu --output-dir .work/hashes-regenerated
 ```
 
 生成脚本使用 Python 标准库，不依赖 Python Redis 客户端。它启动临时实例，只绑定回环地址、使用随机端口及一次性密码，不安装服务，不连接已有 Redis，不执行 FLUSH。关键配置：16 个数据库、关闭定时保存和 AOF、开启 RDB 压缩，默认开启校验和，`--checksum disabled` 则关闭；`INFO keyspace` 确认空库后执行 `SAVE`，再调用同一套工具中的 `redis-check-rdb`。结束后清理实例和临时目录，已有输出目录会被拒绝覆盖。二进制需要 `redis-server` 和 `redis-check-rdb`；脚本也接受自行编译的 Linux Redis 7.2.5，但该路径尚未实测。
@@ -37,6 +42,6 @@ python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2
 python -X utf8 scripts/verify_fixtures.py
 ```
 
-此检查对三份样本合计执行 20 项身份核验：文件大小、SHA256、头部、尾部、校验模式及 String 预期数据等，不实现解析或 CRC64。MoonBit 的 `moon test --target native` 另外解析两份空库和 String 快照，验证值、元信息与校验状态；Redis 工具的原始输出也保留用于对照。
+此检查对四份样本合计执行 28 项身份核验：文件大小、SHA256、头部、尾部、校验模式及预期数据等，不实现解析或 CRC64。MoonBit 的 `moon test --target native` 另外解析两份空库、String 及混合 Hash 快照，验证语义、实际编码、元信息与校验状态；Redis 工具的原始输出也保留用于对照。
 
 样本不含生产数据、密码或个人信息，作为本项目测试数据以 Apache-2.0 提供。仓库不分发 Redis 源码、Windows 工具或其动态库；Redis 7.2.5 的 [COPYING](https://github.com/redis/redis/blob/f60370ce28b946c1146dcea77c9c399d39601aaa/COPYING) 单独适用。下载和重新分发第三方工具时应保留其各组件许可。

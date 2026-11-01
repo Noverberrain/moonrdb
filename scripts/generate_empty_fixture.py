@@ -1,4 +1,4 @@
-"""Generate empty or String RDB fixtures with isolated Redis 7.2.5 processes."""
+"""Generate empty, String or Hash RDB fixtures with isolated Redis 7.2.5 processes."""
 
 import argparse
 import hashlib
@@ -66,7 +66,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--redis-bin", required=True, type=Path)
     parser.add_argument("--checksum", choices=["enabled", "disabled"], default="enabled")
-    parser.add_argument("--dataset", choices=["empty", "strings"], default="empty")
+    parser.add_argument("--dataset", choices=["empty", "strings", "hashes"], default="empty")
     parser.add_argument("--policy", choices=["noeviction", "allkeys-lru", "allkeys-lfu"], default="noeviction")
     parser.add_argument("--output-dir", required=True, type=Path,
                         help="Must not exist; use .work/empty-regenerated for a new run")
@@ -85,14 +85,20 @@ def main():
         candidate.bind(("127.0.0.1", 0))
         port = candidate.getsockname()[1]
     password = secrets.token_hex(32)
-    filename = "empty.rdb" if args.dataset == "empty" else "strings.rdb"
+    filename = args.dataset + ".rdb"
+    dataset = None
+    if args.dataset == "strings":
+        import string_dataset as dataset
+    elif args.dataset == "hashes":
+        import hash_dataset as dataset
+    hash_config = "hash-max-listpack-entries 4\nhash-max-listpack-value 64\n" if args.dataset == "hashes" else ""
     with tempfile.TemporaryDirectory(prefix="moonrdb-empty-") as temp:
         work = Path(temp)
         config = work / "redis.conf"
         config.write_text(
             f'bind 127.0.0.1\nport {port}\nrequirepass {password}\n'
             'protected-mode yes\ndaemonize no\nsave ""\nappendonly no\n'
-            f'databases 16\ndbfilename {filename}\nrdbchecksum {"yes" if args.checksum == "enabled" else "no"}\nrdbcompression yes\nmaxmemory-policy {args.policy}\n',
+            f'databases 16\ndbfilename {filename}\nrdbchecksum {"yes" if args.checksum == "enabled" else "no"}\nrdbcompression yes\nmaxmemory-policy {args.policy}\n' + hash_config,
             encoding="utf-8",
         )
         with (work / "server.log").open("wb") as log:
@@ -104,9 +110,8 @@ def main():
                 if command(port, password, "INFO", "keyspace").strip() != "# Keyspace":
                     raise RuntimeError("Fresh Redis instance is unexpectedly nonempty")
                 expected = []
-                if args.dataset == "strings":
-                    from string_dataset import populate
-                    expected = populate(command, port, password)
+                if dataset is not None:
+                    expected = dataset.populate(command, port, password)
                 if command(port, password, "SAVE") != "OK":
                     raise RuntimeError("SAVE failed")
                 check = subprocess.check_output(
@@ -116,7 +121,7 @@ def main():
                 checksum_message = "Checksum OK" if args.checksum == "enabled" else "checksum disabled"
                 if checksum_message not in check or f"{len(expected)} keys read" not in check:
                     raise RuntimeError(f"Unexpected redis-check-rdb output: {check}")
-                if args.dataset == "strings":
+                if dataset is not None:
                     # Verify saved semantics by loading the unchanged file into a
                     # second isolated process, not by reusing the in-memory data.
                     proc.terminate()
@@ -124,8 +129,7 @@ def main():
                     proc = subprocess.Popen([str(server), config.name], cwd=work,
                                             stdout=log, stderr=subprocess.STDOUT)
                     wait_ready(proc, port, password, work)
-                    from string_dataset import verify
-                    verify(command, port, password)
+                    dataset.verify(command, port, password)
                 data = (work / filename).read_bytes()
                 if data[:9] != b"REDIS0011" or data[-9] != 255:
                     raise RuntimeError("Unexpected RDB framing")
@@ -146,9 +150,12 @@ def main():
                     "checksum_enabled": args.checksum == "enabled",
                     "generation": "Fresh isolated instance; INFO keyspace empty; SAVE; redis-check-rdb",
                 }
-                if args.dataset == "strings":
+                if dataset is not None:
                     manifest["policy"] = args.policy
-                    manifest["generation"] += "; reload in second process; GET and PEXPIRETIME verified for every key"
+                    manifest["generation"] += "; reload in second process; values and PEXPIRETIME verified for every key"
+                    if args.dataset == "hashes":
+                        manifest["hash_max_listpack_entries"] = 4
+                        manifest["hash_max_listpack_value"] = 64
                     expected_data = (json.dumps(expected, indent=2) + "\n").encode("utf-8")
                     (args.output_dir / "expected.json").write_bytes(expected_data)
                     manifest["expected_sha256"] = hashlib.sha256(expected_data).hexdigest()

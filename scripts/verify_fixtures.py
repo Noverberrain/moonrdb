@@ -34,6 +34,7 @@ def main():
     verify(root / "redis-7.2.5", True)
     verify(root / "redis-7.2.5-no-checksum", False)
     verify(root / "redis-7.2.5-strings", True)
+    verify(root / "redis-7.2.5-hashes", True)
     print("Identity checks only; RDB parsing and CRC64 are covered separately by MoonBit tests.")
 
 

@@ -28,6 +28,8 @@ pub(all) suberror ParseError {
   ChecksumMismatch(offset~ : Int32, stored~ : UInt64, computed~ : UInt64)
   TrailingData(offset~ : Int32, remaining~ : Int32)
   InvalidLzf(offset~ : Int32, reason~ : String)
+  InvalidHash(offset~ : Int32, reason~ : String)
+  InvalidListpack(offset~ : Int32, inner_offset~ : Int32, reason~ : String)
 } derive(Debug)
 
 ///|

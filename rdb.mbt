@@ -60,7 +60,7 @@ pub fn parse_strings(
   max_records~ : Int32 = 100000,
   max_decoded_bytes~ : Int32 = 64 * 1024 * 1024,
 ) -> StringSnapshot raise ParseError {
-  parse_snapshot(
+  let result = parse_snapshot(
     input,
     max_input_bytes,
     max_string_bytes,
@@ -69,6 +69,26 @@ pub fn parse_strings(
     max_decoded_bytes,
     allow_strings=true,
   )
+  let records = result.records.map(record => {
+    match record {
+      String(value) => value
+      Hash(value) =>
+        raise UnsupportedObjectType(
+          offset=value.record_start,
+          object_type=b'\x04',
+        )
+    }
+  })
+  {
+    format_version: result.format_version,
+    aux_fields: result.aux_fields,
+    database_selections: result.database_selections,
+    resize_hints: result.resize_hints,
+    records,
+    checksum: result.checksum,
+    file_size: result.file_size,
+    global_overhead_bytes: result.global_overhead_bytes,
+  }
 }
 
 ///|
@@ -80,7 +100,10 @@ fn parse_snapshot(
   max_records : Int32,
   max_decoded_bytes : Int32,
   allow_strings~ : Bool,
-) -> StringSnapshot raise ParseError {
+  allow_hashes~ : Bool = false,
+  max_hash_entries~ : Int32 = 100000,
+  max_packed_bytes~ : Int32 = 4 * 1024 * 1024,
+) -> Snapshot raise ParseError {
   let reader = Reader::new(input, max_input_bytes~)
   for
     (resource, limit) in [
@@ -95,6 +118,8 @@ fn parse_snapshot(
       ("metadata-entries", max_metadata_entries),
       ("records", max_records),
       ("decoded-bytes", max_decoded_bytes),
+      ("hash-entries", max_hash_entries),
+      ("packed-bytes", max_packed_bytes),
     ] {
     if limit < 0 {
       raise InvalidResourceLimit(offset=0, resource~, limit~)
@@ -175,7 +200,7 @@ fn parse_snapshot(
       }
       248 | 249 | 252 | 253 => {
         let prefix = reader.read_key_prefix(opcode, offset)
-        if !allow_strings || prefix.object_type != b'\x00' {
+        if !supported_type(prefix.object_type, allow_strings, allow_hashes) {
           raise UnsupportedObjectType(
             offset=prefix.type_offset,
             object_type=prefix.object_type,
@@ -187,15 +212,16 @@ fn parse_snapshot(
           records.length().to_uint64() + 1UL,
           max_records,
         )
-        let record = reader.read_string_record(
-          prefix, database, max_string_bytes, budget,
+        let record = reader.read_record(
+          prefix, database, max_string_bytes, max_hash_entries, max_packed_bytes,
+          budget,
         )
-        record_bytes += record.serialized_bytes
+        record_bytes += record_size(record)
         records.push(record)
       }
       _ =>
         if is_object_type(opcode) {
-          if !allow_strings || opcode != b'\x00' {
+          if !supported_type(opcode, allow_strings, allow_hashes) {
             raise UnsupportedObjectType(offset~, object_type=opcode)
           }
           check_resource_limit(
@@ -212,14 +238,86 @@ fn parse_snapshot(
             idle_seconds: None,
             frequency: None,
           }
-          let record = reader.read_string_record(
-            prefix, database, max_string_bytes, budget,
+          let record = reader.read_record(
+            prefix, database, max_string_bytes, max_hash_entries, max_packed_bytes,
+            budget,
           )
-          record_bytes += record.serialized_bytes
+          record_bytes += record_size(record)
           records.push(record)
         } else {
           raise UnsupportedOpcode(offset~, opcode~)
         }
     }
+  }
+}
+
+///|
+/// Parse a complete version-11 snapshot of the supported String and Hash types.
+/// Packed container scratch space is bounded separately from returned data.
+///
+/// ```mbt check
+/// test {
+///   let result = @moonrdb.parse(
+///     b"REDIS0011\x04\x01k\x01\x01f\x01v\xff\x00\x00\x00\x00\x00\x00\x00\x00",
+///   )
+///   assert_eq(result.records.length(), 1)
+/// }
+/// ```
+pub fn parse(
+  input : Bytes,
+  max_input_bytes~ : Int32 = 64 * 1024 * 1024,
+  max_string_bytes~ : Int32 = 1024 * 1024,
+  max_metadata_entries~ : Int32 = 4096,
+  max_records~ : Int32 = 100000,
+  max_decoded_bytes~ : Int32 = 64 * 1024 * 1024,
+  max_hash_entries~ : Int32 = 100000,
+  max_packed_bytes~ : Int32 = 4 * 1024 * 1024,
+) -> Snapshot raise ParseError {
+  parse_snapshot(
+    input,
+    max_input_bytes,
+    max_string_bytes,
+    max_metadata_entries,
+    max_records,
+    max_decoded_bytes,
+    allow_strings=true,
+    allow_hashes=true,
+    max_hash_entries~,
+    max_packed_bytes~,
+  )
+}
+
+///|
+fn supported_type(value : Byte, strings : Bool, hashes : Bool) -> Bool {
+  (strings && value == b'\x00') ||
+  (hashes && (value == b'\x04' || value == b'\x10'))
+}
+
+///|
+fn record_size(record : RdbRecord) -> UInt64 {
+  match record {
+    String(value) => value.serialized_bytes
+    Hash(value) => value.serialized_bytes
+  }
+}
+
+///|
+fn Reader::read_record(
+  self : Reader,
+  prefix : KeyPrefix,
+  database : UInt64,
+  max_string_bytes : Int32,
+  max_hash_entries : Int32,
+  max_packed_bytes : Int32,
+  budget : DecodeBudget,
+) -> RdbRecord raise ParseError {
+  if prefix.object_type == b'\x00' {
+    String(self.read_string_record(prefix, database, max_string_bytes, budget))
+  } else {
+    Hash(
+      self.read_hash_record(
+        prefix, database, max_string_bytes, max_hash_entries, max_packed_bytes, budget,
+      ),
+    )
   }
 }
