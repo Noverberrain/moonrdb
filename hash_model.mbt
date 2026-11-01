@@ -53,6 +53,7 @@ pub extend HashRecord with Eq::{equal, not_equal}
 pub(all) enum RdbRecord {
   String(StringRecord)
   Hash(HashRecord)
+  List(ListRecord)
 } derive(Debug, Eq)
 
 ///|

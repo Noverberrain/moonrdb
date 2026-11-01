@@ -263,6 +263,7 @@ async test "real mixed Hash snapshot verifies both encodings and persisted seman
   let mut strings = 0
   for record in result.records {
     let (start, end, size) = match record {
+      List(_) => fail("unexpected List in Hash fixture")
       Hash(value) =>
         (value.record_start, value.record_end, value.serialized_bytes)
       String(value) => {

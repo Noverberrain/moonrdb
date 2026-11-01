@@ -1,0 +1,20 @@
+{
+  "redis_version": "7.2.5",
+  "upstream_commit": "f60370ce28b946c1146dcea77c9c399d39601aaa",
+  "generator_version": "Redis server v=7.2.5 sha=00000000:0 malloc=libc bits=64 build=2c0c57178146e13d",
+  "server_binary_sha256": "af5e06494b39b496dd30f22cf27201b27f65468614f0b61b3abe0d1fa0615f9b",
+  "rdb_format_version": 11,
+  "file": "lists.rdb",
+  "size_bytes": 737,
+  "sha256": "83e7766b43309cad12db020388abc6005eea5935f1a2ce3a203cfb48af4c2214",
+  "expected_keys": 8,
+  "databases_configured": 16,
+  "checksum_enabled": true,
+  "generation": "Fresh isolated instance; INFO keyspace empty; SAVE; redis-check-rdb; reload in second process; values and PEXPIRETIME verified for every key",
+  "policy": "allkeys-lru",
+  "list_max_listpack_size": 2,
+  "list_compress_depth": 1,
+  "test_plain_node_threshold": 64,
+  "test_plain_node_method": "DEBUG QUICKLIST-PACKED-THRESHOLD 64 in isolated generator only",
+  "expected_sha256": "4a8cdf8d442d5b7881e638aa3456ec674076626507542ca1e2a2031066895c92"
+}

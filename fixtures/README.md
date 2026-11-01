@@ -1,4 +1,4 @@
-# 真实快照样本（F0—F4）
+# 真实快照样本（F0—F5）
 
 `redis-7.2.5/empty.rdb` 是专用 Redis 7.2.5 实例执行 `SAVE` 的原始产物，未手工拼接或修改。
 
@@ -21,6 +21,10 @@ F4 新增 `redis-7.2.5-hashes/hashes.rdb`，502 字节，SHA256 为 `252fd1e57b9
 
 Hash 数据经过 SAVE、Redis 完整性检查、隔离重新加载与逐键 HLEN / HGET / GET / PEXPIRETIME 对照，现有样本也单独重新加载复核。MoonBit 再检查实际 RDB 编码、无序字段语义及记录体积。运行时 OBJECT ENCODING 只用于核对生成阈值效果，不能代替 RDB 类型验证。
 
+F5 新增 `redis-7.2.5-lists/lists.rdb`，737 字节，SHA256 为 `83e7766b43309cad12db020388abc6005eea5935f1a2ce3a203cfb48af4c2214`，使用同一已核验 Windows 构建。含 DB 0 / 2 的 6 个 List 与 String / Hash 标记键，覆盖单／多节点、混合 plain / packed、LZF、顺序、重复与空元素、二进制、LRU 和到期时间。数据依据为 `scripts/list_dataset.py`，预期字节以 Base64 保存并记录哈希。
+
+List 配置固定为 `list-max-listpack-size=2`、`list-compress-depth=1`。plain 默认需要很大的元素；小型真实 plain 样本是在专用回环实例中启用本地 DEBUG，并执行 `DEBUG QUICKLIST-PACKED-THRESHOLD 64` 生成，条件完整写在 manifest。它仍是 Redis SAVE 的未修改产物，不是手工拼接；未验证默认 1 GiB 阈值规模。第二个进程重新加载同一文件，按 LLEN / LINDEX 比较每个元素顺序，核对 String / Hash 标记及 PEXPIRETIME。细节见 [List 约定](../docs/lists.md)。
+
 ## 生成方法
 
 下载、核对归档哈希并解压后，在仓库根目录运行（把路径换成实际位置）：
@@ -30,6 +34,7 @@ python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --checksum disabled --output-dir .work/empty-no-checksum-regenerated
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset strings --policy allkeys-lru --output-dir .work/strings-regenerated
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset hashes --policy allkeys-lfu --output-dir .work/hashes-regenerated
+python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset lists --policy allkeys-lru --output-dir .work/lists-regenerated
 ```
 
 生成脚本使用 Python 标准库，不依赖 Python Redis 客户端。它启动临时实例，只绑定回环地址、使用随机端口及一次性密码，不安装服务，不连接已有 Redis，不执行 FLUSH。关键配置：16 个数据库、关闭定时保存和 AOF、开启 RDB 压缩，默认开启校验和，`--checksum disabled` 则关闭；`INFO keyspace` 确认空库后执行 `SAVE`，再调用同一套工具中的 `redis-check-rdb`。结束后清理实例和临时目录，已有输出目录会被拒绝覆盖。二进制需要 `redis-server` 和 `redis-check-rdb`；脚本也接受自行编译的 Linux Redis 7.2.5，但该路径尚未实测。
@@ -42,6 +47,6 @@ python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2
 python -X utf8 scripts/verify_fixtures.py
 ```
 
-此检查对四份样本合计执行 28 项身份核验：文件大小、SHA256、头部、尾部、校验模式及预期数据等，不实现解析或 CRC64。MoonBit 的 `moon test --target native` 另外解析两份空库、String 及混合 Hash 快照，验证语义、实际编码、元信息与校验状态；Redis 工具的原始输出也保留用于对照。
+此检查对五份样本合计执行 36 项身份核验：文件大小、SHA256、头部、尾部、校验模式及预期数据等，不实现解析或 CRC64。MoonBit 的 `moon test --target native` 另外解析两份空库、String、混合 Hash 与混合 List 快照，验证语义、实际编码、元信息与校验状态；Redis 工具的原始输出也保留用于对照。
 
 样本不含生产数据、密码或个人信息，作为本项目测试数据以 Apache-2.0 提供。仓库不分发 Redis 源码、Windows 工具或其动态库；Redis 7.2.5 的 [COPYING](https://github.com/redis/redis/blob/f60370ce28b946c1146dcea77c9c399d39601aaa/COPYING) 单独适用。下载和重新分发第三方工具时应保留其各组件许可。

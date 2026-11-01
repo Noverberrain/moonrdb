@@ -4,6 +4,6 @@
 ///|
 fn main {
   println(
-    "MoonRDB: F4 String and Hash snapshot API available; other object types and CLI commands are not implemented.",
+    "MoonRDB: F5 String, Hash and List snapshot API available; other types and CLI commands are not implemented.",
   )
 }

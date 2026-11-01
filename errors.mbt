@@ -30,6 +30,7 @@ pub(all) suberror ParseError {
   InvalidLzf(offset~ : Int32, reason~ : String)
   InvalidHash(offset~ : Int32, reason~ : String)
   InvalidListpack(offset~ : Int32, inner_offset~ : Int32, reason~ : String)
+  InvalidList(offset~ : Int32, reason~ : String)
 } derive(Debug)
 
 ///|

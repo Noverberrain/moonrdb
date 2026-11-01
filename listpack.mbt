@@ -155,30 +155,7 @@ fn decode_hash_listpack(
   max_hash_entries : Int32,
   budget : DecodeBudget,
 ) -> Array[HashEntry] raise ParseError {
-  if input.length() < 7 {
-    raise InvalidListpack(
-      offset=base,
-      inner_offset=0,
-      reason="short header or missing terminator",
-    )
-  }
-  let reader = Reader::new(input, max_input_bytes=input.length())
-  let total = reader.read_u32_le()
-  if total != input.length().reinterpret_as_uint() {
-    raise InvalidListpack(
-      offset=base,
-      inner_offset=0,
-      reason="total length mismatch",
-    )
-  }
-  let declared = reader.read_unsigned(2, little_endian=true).to_int()
-  if input[input.length() - 1] != b'\xff' {
-    raise InvalidListpack(
-      offset=base,
-      inner_offset=input.length() - 1,
-      reason="missing terminator",
-    )
-  }
+  let (reader, declared) = open_listpack(input, base)
   if declared != 65535 {
     if declared % 2 != 0 {
       raise InvalidHash(offset=base, reason="odd listpack element count")
@@ -222,4 +199,36 @@ fn decode_hash_listpack(
     raise InvalidHash(offset=base, reason="empty hash")
   }
   entries
+}
+
+///|
+fn open_listpack(
+  input : Bytes,
+  base : Int32,
+) -> (Reader, Int32) raise ParseError {
+  if input.length() < 7 {
+    raise InvalidListpack(
+      offset=base,
+      inner_offset=0,
+      reason="short header or missing terminator",
+    )
+  }
+  let reader = Reader::new(input, max_input_bytes=input.length())
+  let total = reader.read_u32_le()
+  if total != input.length().reinterpret_as_uint() {
+    raise InvalidListpack(
+      offset=base,
+      inner_offset=0,
+      reason="total length mismatch",
+    )
+  }
+  let declared = reader.read_unsigned(2, little_endian=true).to_int()
+  if input[input.length() - 1] != b'\xff' {
+    raise InvalidListpack(
+      offset=base,
+      inner_offset=input.length() - 1,
+      reason="missing terminator",
+    )
+  }
+  (reader, declared)
 }

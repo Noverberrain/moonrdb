@@ -1,6 +1,6 @@
-# 兼容矩阵（F4）
+# 兼容矩阵（F5）
 
-通用 `parse` 支持文件结构、String 与 Hash。`parse_strings` 仍只接受 String；原 `parse_empty` 保留 F2 边界：拒绝对象及 AUX LZF。List、Set、Sorted Set 等尚未实现。
+通用 `parse` 支持文件结构、String、Hash 与 quicklist2 List。`parse_strings` 仍只接受 String；原 `parse_empty` 保留 F2 边界：拒绝对象及 AUX LZF。Set、Sorted Set 等尚未实现。
 
 ## 固定的格式依据
 
@@ -20,7 +20,7 @@
 | String | 0 | STRING；rdbSaveObjectType / rdbSaveObject | F3 | 已实现 / 真实普通、二进制、空值、INT8/16/32、LZF 键与值通过 |
 | Hash | 4 | HASH，普通键值对 | F4 | 已实现 / 真实超条目阈值、长字段与长值样本通过 |
 | Hash | 16 | HASH_LISTPACK | F4 | 已实现 / 真实紧凑 Hash、整数／二进制、LZF 容器样本通过 |
-| List | 18 | LIST_QUICKLIST_2；节点区分 plain / packed，packed 为 listpack | F5 | 未实现 / 无 |
+| List | 18 | LIST_QUICKLIST_2；节点区分 plain / packed，packed 为 listpack | F5 | 已实现 / 真实单／多节点、混合 plain / packed、二进制、空元素与 LZF 节点通过 |
 | Set | 2 | SET，普通元素序列 | F6 | 未实现 / 无 |
 | Set | 11 | SET_INTSET | F6 | 未实现 / 无 |
 | Set | 20 | SET_LISTPACK | F6 | 未实现 / 无 |
@@ -34,6 +34,8 @@ F1 的长度／整数测试保留。F3 已验证 String 完整解码、LZF 字�
 
 F4 已验证 listpack 字符串长度表示、7 位无符号及 13 / 16 / 24 / 32 / 64 位有符号整数、总字节数、元素数（含未知计数 65535）、反向长度和 EOF。Hash 还检查配对、重复字段及资源限制；历史 zipmap / ziplist 不在支持范围。详见 [hashes.md](hashes.md)。
 
+F5 复用 listpack 的头部与元素校验，但 List 允许奇数元素和重复值，严格保留顺序。节点数和元素数按整份快照累计限制。plain 的默认生成阈值为 1 GiB，本项目真实小样本通过隔离实例的官方 DEBUG 阈值命令构造，不宣称验证过 1 GiB 元素。历史 List 类型 1 / 10 / 14 不支持。详见 [lists.md](lists.md)。
+
 ## 文件结构
 
 | 内容 | 标记 / 定义 | 计划 | 当前状态 |
@@ -43,10 +45,10 @@ F4 已验证 listpack 字符串长度表示、7 位无符号及 13 / 16 / 24 / 3
 | SELECTDB / RESIZEDB | 254 / 251 | F2/F3 | 合成测试与真实 DB 0 / 2 的 String 样本通过 |
 | EXPIRETIME / EXPIRETIME_MS | 253 / 252 | F2/F3 | 毫秒时间有真实 String 样本；旧秒编码仅有小端合成测试 |
 | IDLE / FREQ | 248 / 249 | F2/F3/F4 | IDLE 有真实 String 样本；FREQ 有真实 Hash 样本 |
-| EOF 与 CRC64 | 255 + 8 字节校验和 | F2/F3/F4 | 四份真实快照通过；有效与关闭状态可区分，损坏／截断被拒绝 |
+| EOF 与 CRC64 | 255 + 8 字节校验和 | F2—F5 | 五份真实快照通过；有效与关闭状态可区分，损坏／截断被拒绝 |
 | FUNCTION2 / FUNCTION_PRE_GA / MODULE_AUX | 245 / 246 / 247 | 首版范围外 | 未实现；暂无样本 |
 
-样本来源、SHA256 和复现方式见 [fixtures/README.md](../fixtures/README.md)。Python 离线验证核对样本身份和预期数据；MoonBit 测试解析两份空库、一份 String 快照及一份混合 Hash 快照，检查语义、编码及校验状态。
+样本来源、SHA256 和复现方式见 [fixtures/README.md](../fixtures/README.md)。Python 离线验证核对样本身份和预期数据；MoonBit 测试解析两份空库、String 快照、混合 Hash 快照和混合 List 快照，检查语义、编码及校验状态。
 
 ## 工具链与执行环境
 
