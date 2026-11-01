@@ -1,5 +1,7 @@
 # F2 无对象快照解析
 
+本页保留 F2 API 的约定。F3 新增 [parse_strings](strings.md)，原 `parse_empty` 仍拒绝对象及 AUX LZF，行为未扩大。
+
 ## 接口与成功含义
 
 `parse_empty(input, max_input_bytes=64 MiB, max_string_bytes=1 MiB, max_metadata_entries=4096)` 返回 `EmptySnapshot`，异常为 `ParseError`。参数的实际签名以 `pkg.generated.mbti` 为准。
@@ -34,6 +36,6 @@
 
 ## 验证证据
 
-当前 42 项测试包含原 F1 的 20 项，并新增 22 项。原有真实空库验证 AUX 与 CRC64；新增真实关闭校验和空库验证 `Disabled`。两份样本均由隔离的第三方 Windows Redis 7.2.5 构建生成，来源详见 [样本说明](../fixtures/README.md)。
+F2 交付时的 42 项测试包含原 F1 的 20 项，并新增 22 项，F3 中全部保留。原有真实空库验证 AUX 与 CRC64；真实关闭校验和空库验证 `Disabled`。两份样本均由隔离的第三方 Windows Redis 7.2.5 构建生成，来源详见 [样本说明](../fixtures/README.md)。
 
 数据库切换、RESIZEDB、大数提示、二进制与整数 AUX、到期／空闲／频率字段、重复和孤立元信息、未知操作码及资源限制使用明确标记的合成输入。真实空库不会包含数据库切换和键元信息，本阶段没有真实有键快照的对象级验收，也没有性能或大文件内存测量。

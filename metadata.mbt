@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ///|
-// F2 tests retain these values; object decoding will consume them in F3.
-#warnings("-unused_field")
 priv struct KeyPrefix {
   start : Int32
   type_offset : Int32

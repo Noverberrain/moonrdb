@@ -27,6 +27,7 @@ pub(all) suberror ParseError {
   DanglingKeyMetadata(offset~ : Int32)
   ChecksumMismatch(offset~ : Int32, stored~ : UInt64, computed~ : UInt64)
   TrailingData(offset~ : Int32, remaining~ : Int32)
+  InvalidLzf(offset~ : Int32, reason~ : String)
 } derive(Debug)
 
 ///|

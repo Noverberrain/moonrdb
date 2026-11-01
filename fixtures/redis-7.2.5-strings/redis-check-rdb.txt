@@ -1,0 +1,13 @@
+[offset 0] Checking RDB file strings.rdb
+[offset 26] AUX FIELD redis-ver = '7.2.5'
+[offset 40] AUX FIELD redis-bits = '64'
+[offset 52] AUX FIELD ctime = '1793504291'
+[offset 67] AUX FIELD used-mem = '806024'
+[offset 79] AUX FIELD aof-base = '0'
+[offset 81] Selecting DB ID 0
+[offset 387] Selecting DB ID 2
+[offset 463] Checksum OK
+[offset 463] \o/ RDB looks OK! \o/
+[info] 15 keys read
+[info] 1 expires
+[info] 0 already expired

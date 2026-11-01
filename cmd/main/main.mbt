@@ -4,6 +4,6 @@
 ///|
 fn main {
   println(
-    "MoonRDB: F2 empty-snapshot API available; object decoding and CLI commands are not implemented.",
+    "MoonRDB: F3 String snapshot API available; other object types and CLI commands are not implemented.",
   )
 }

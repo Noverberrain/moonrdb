@@ -1,6 +1,6 @@
-# 兼容矩阵（F2）
+# 兼容矩阵（F3）
 
-当前完成工程骨架、底层读取和支持范围内的空库完整解析，**所有 RDB 键值对象解析项均未实现**。AUX 的普通与整数编码字符串可解码，LZF 尚不支持。
+当前 `parse_strings` 支持文件结构与 String 对象，普通、整数及 LZF 编码可解码。其他逻辑类型仍未实现。原 `parse_empty` 保留 F2 边界：拒绝对象及 AUX LZF。
 
 ## 固定的格式依据
 
@@ -17,7 +17,7 @@
 
 | 逻辑类型 | RDB 标记 | 保存表示 / 上游依据 | 计划 | 当前解析 / 真实对象样本 |
 |---|---|---|---|---|
-| String | 0 | STRING；rdbSaveObjectType / rdbSaveObject | F3 | 未实现 / 无 |
+| String | 0 | STRING；rdbSaveObjectType / rdbSaveObject | F3 | 已实现 / 真实普通、二进制、空值、INT8/16/32、LZF 键与值通过 |
 | Hash | 4 | HASH，普通键值对 | F4 | 未实现 / 无 |
 | Hash | 16 | HASH_LISTPACK | F4 | 未实现 / 无 |
 | List | 18 | LIST_QUICKLIST_2；节点区分 plain / packed，packed 为 listpack | F5 | 未实现 / 无 |
@@ -30,21 +30,21 @@
 | Module | 7 | MODULE_2，此版本的保存分支 | 首版范围外 | 未实现 / 无 |
 | 历史表示 | 1、3、6、9、10、12、13、14、15、19 | 上游加载器仍有分支：LIST、ZSET、MODULE_PRE_GA、ZIPMAP、ZIPLIST、QUICKLIST、旧 STREAM | 首版不承诺 | 未实现 / 无 |
 
-F1 已验证 6 / 14 / 32 / 64 位长度和 INT8 / INT16 / INT32 / LZF 标记识别，以及独立的有符号整数读取。编码字符串的完整解码与 LZF 解压仍留待 F3；不能据此宣称支持 String 对象。读取规则与测试边界见 [reader.md](reader.md)。
+F1 的长度／整数测试保留。F3 已验证 String 完整解码、LZF 字面量与重叠／非重叠回引用、扩展长度、最大回溯距离，以及解压和累计解码预算。详情见 [strings.md](strings.md)。
 
 ## 文件结构
 
 | 内容 | 标记 / 定义 | 计划 | 当前状态 |
 |---|---|---|---|
 | 文件头 | `REDIS` + 四位格式版本 | F1 | 已实现；真实空库头部通过，格式仅接受 11 |
-| AUX 辅助字段 | 250 | F2 | 普通／整数编码已实现且真实样本通过；LZF 留待 F3 |
-| SELECTDB / RESIZEDB | 254 / 251 | F2 | 已实现，合成测试通过；空库不写这些操作码，暂无真实切换样本 |
-| EXPIRETIME / EXPIRETIME_MS | 253 / 252 | F2 | 前置元信息已实现，合成测试通过；旧秒编码仅按小端解释；暂无真实对象样本 |
-| IDLE / FREQ | 248 / 249 | F2 | 前置元信息已实现，合成测试通过；暂无真实对象样本 |
-| EOF 与 CRC64 | 255 + 8 字节校验和 | F2 | 两份真实空库完整通过；有效与关闭状态可区分，损坏／截断被拒绝 |
+| AUX 辅助字段 | 250 | F2/F3 | 普通／整数有真实样本；LZF 仅 parse_strings 支持，合成测试通过 |
+| SELECTDB / RESIZEDB | 254 / 251 | F2/F3 | 合成测试与真实 DB 0 / 2 的 String 样本通过 |
+| EXPIRETIME / EXPIRETIME_MS | 253 / 252 | F2/F3 | 毫秒时间有真实 String 样本；旧秒编码仅有小端合成测试 |
+| IDLE / FREQ | 248 / 249 | F2/F3 | IDLE 有真实 String 样本；FREQ 仅合成测试 |
+| EOF 与 CRC64 | 255 + 8 字节校验和 | F2/F3 | 三份真实快照通过；有效与关闭状态可区分，损坏／截断被拒绝 |
 | FUNCTION2 / FUNCTION_PRE_GA / MODULE_AUX | 245 / 246 / 247 | 首版范围外 | 未实现；暂无样本 |
 
-样本来源、SHA256 和复现方式见 [fixtures/README.md](../fixtures/README.md)。Python 离线验证只核对样本身份和固定边界；MoonBit 测试完整解析两份真实空库，检查 CRC64 或关闭状态。完整边界见 [empty-snapshot.md](empty-snapshot.md)。
+样本来源、SHA256 和复现方式见 [fixtures/README.md](../fixtures/README.md)。Python 离线验证核对样本身份和预期数据；MoonBit 测试解析两份真实空库及一份真实 String 快照，检查 CRC64 或关闭状态。
 
 ## 工具链与执行环境
 

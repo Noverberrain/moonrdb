@@ -5,28 +5,15 @@
 fn Reader::read_aux_string(
   self : Reader,
   max_string_bytes : Int32,
+  budget : DecodeBudget,
+  allow_lzf~ : Bool,
 ) -> Bytes raise ParseError {
-  let offset = self.pos
-  errdefer {
-    self.pos = offset
-  }
-  let value = match self.read_length() {
-    Plain(count) => {
-      check_resource_limit("aux-string-bytes", offset, count, max_string_bytes)
-      self.read_bytes(count).to_owned()
-    }
-    Encoded(Int8) => b"\{self.read_i8()}"
-    Encoded(Int16) => b"\{self.read_i16_le()}"
-    Encoded(Int32) => b"\{self.read_i32_le()}"
-    Encoded(Lzf) => raise UnsupportedStringEncoding(offset~, encoding=3)
-  }
-  check_resource_limit(
-    "aux-string-bytes",
-    offset,
-    value.length().to_uint64(),
+  self.read_string(
     max_string_bytes,
-  )
-  value
+    budget,
+    allow_lzf~,
+    resource="aux-string-bytes",
+  ).value
 }
 
 ///|

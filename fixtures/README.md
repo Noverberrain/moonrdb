@@ -1,4 +1,4 @@
-# 真实空库样本（F0 / F2）
+# 真实快照样本（F0 / F2 / F3）
 
 `redis-7.2.5/empty.rdb` 是专用 Redis 7.2.5 实例执行 `SAVE` 的原始产物，未手工拼接或修改。
 
@@ -13,6 +13,10 @@
 
 F2 新增 `redis-7.2.5-no-checksum/empty.rdb`，使用同一已核验 Windows 构建，以 `rdbchecksum no` 生成，仍为未修改的真实 SAVE 产物：88 字节，SHA256 为 `32f2a41679e6d1f6372958c03f378c9b956a2acb4cc092ffbb7b76815c5fb93e`。该目录单独保存 manifest 与 Redis 检查输出；后者明确报告 `checksum disabled: no check performed`、`0 keys read`，不能作为校验通过的证据。
 
+F3 新增 `redis-7.2.5-strings/strings.rdb`，使用同一构建、开启压缩／校验和及 `allkeys-lru` 策略生成。463 字节，SHA256 为 `7182c11f636d36f690d3726ef9ee946f998684e55f829f4d61d4ce7840975181`。它包含 DB 0 / 2 的 15 个合成 String 键，覆盖普通、二进制、空值、三个整数编码、LZF 键与值、到期时间和 LRU 信息。`scripts/string_dataset.py` 是构造依据，`expected.json` 以 Base64 记录原始键值与绝对到期时间，其哈希另存 manifest。
+
+String 生成流程在 SAVE 前核对键值，SAVE 后通过 `redis-check-rdb` 确认完整性，再启动第二个隔离进程加载同一文件，对所有键核对 GET 与 PEXPIRETIME。该流程验证真实持久化语义，MoonBit 测试另外检查解析结果及实际 RDB 编码；不能从 Redis 内存对象编码推断文件编码。
+
 ## 生成方法
 
 下载、核对归档哈希并解压后，在仓库根目录运行（把路径换成实际位置）：
@@ -20,6 +24,7 @@ F2 新增 `redis-7.2.5-no-checksum/empty.rdb`，使用同一已核验 Windows �
 ```powershell
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --output-dir .work/empty-regenerated
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --checksum disabled --output-dir .work/empty-no-checksum-regenerated
+python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset strings --policy allkeys-lru --output-dir .work/strings-regenerated
 ```
 
 生成脚本使用 Python 标准库，不依赖 Python Redis 客户端。它启动临时实例，只绑定回环地址、使用随机端口及一次性密码，不安装服务，不连接已有 Redis，不执行 FLUSH。关键配置：16 个数据库、关闭定时保存和 AOF、开启 RDB 压缩，默认开启校验和，`--checksum disabled` 则关闭；`INFO keyspace` 确认空库后执行 `SAVE`，再调用同一套工具中的 `redis-check-rdb`。结束后清理实例和临时目录，已有输出目录会被拒绝覆盖。二进制需要 `redis-server` 和 `redis-check-rdb`；脚本也接受自行编译的 Linux Redis 7.2.5，但该路径尚未实测。
@@ -32,6 +37,6 @@ python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2
 python -X utf8 scripts/verify_fixtures.py
 ```
 
-此检查对两份样本合计执行 12 项身份核验：文件大小、SHA256、头部、尾部与校验模式等，不实现解析或 CRC64。MoonBit 的 `moon test --target native` 另外执行完整无对象快照解析，并验证启用样本的 CRC64 与关闭样本的状态；Redis 工具的原始输出也保留用于对照。
+此检查对三份样本合计执行 20 项身份核验：文件大小、SHA256、头部、尾部、校验模式及 String 预期数据等，不实现解析或 CRC64。MoonBit 的 `moon test --target native` 另外解析两份空库和 String 快照，验证值、元信息与校验状态；Redis 工具的原始输出也保留用于对照。
 
 样本不含生产数据、密码或个人信息，作为本项目测试数据以 Apache-2.0 提供。仓库不分发 Redis 源码、Windows 工具或其动态库；Redis 7.2.5 的 [COPYING](https://github.com/redis/redis/blob/f60370ce28b946c1146dcea77c9c399d39601aaa/COPYING) 单独适用。下载和重新分发第三方工具时应保留其各组件许可。

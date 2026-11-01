@@ -1,6 +1,15 @@
 # Copyright 2026 Noverberrain.
 # SPDX-License-Identifier: Apache-2.0
 $ErrorActionPreference = 'Stop'
+
+function Get-InterfaceFingerprints {
+    $interfacePaths = @(git ls-files --cached --others --exclude-standard -- '*.mbti')
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot list interface files' }
+    (($interfacePaths | Sort-Object -Unique | ForEach-Object {
+        "$_ $((Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash)"
+    }) -join "`n")
+}
+
 Push-Location (Split-Path $PSScriptRoot -Parent)
 try {
     python -X utf8 scripts/verify_fixtures.py
@@ -13,10 +22,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'MoonBit tests failed' }
     moon build --target native
     if ($LASTEXITCODE -ne 0) { throw 'MoonBit build failed' }
+    $interfacesBefore = Get-InterfaceFingerprints
     moon info --target native
     if ($LASTEXITCODE -ne 0) { throw 'MoonBit interface generation failed' }
-    git diff --exit-code -- '*.mbti'
-    if ($LASTEXITCODE -ne 0) { throw 'Generated interfaces are out of date' }
+    if ($interfacesBefore -cne (Get-InterfaceFingerprints)) {
+        throw 'Generated interfaces are out of date; run moon info and review the changes'
+    }
 } finally {
     Pop-Location
 }
