@@ -32,7 +32,7 @@ Hash 记录区间包含全部前置键元信息、类型、键与对象内容，
 
 ## 真实样本与测试范围
 
-F4 交付时 native 测试共 76 项（4 项文档测试），相关回归在后续阶段保留，当前完整测试为 148 项。502 字节真实快照包含 8 个 Hash 和 1 个 String，分布在 DB 0 / 2。固定 `hash-max-listpack-entries=4`、`hash-max-listpack-value=64`，覆盖：小 Hash、超过条目阈值、超过字段长度阈值、超过值长度阈值、二进制／空字段、整数极值、LZF 键与值以及 LZF 压缩 listpack。策略设为 allkeys-lfu，另有真实频率字段和绝对到期时间。
+F4 交付时 native 测试共 76 项（4 项文档测试），相关回归在后续阶段保留，当前完整测试为 153 项。502 字节真实快照包含 8 个 Hash 和 1 个 String，分布在 DB 0 / 2。固定 `hash-max-listpack-entries=4`、`hash-max-listpack-value=64`，覆盖：小 Hash、超过条目阈值、超过字段长度阈值、超过值长度阈值、二进制／空字段、整数极值、LZF 键与值以及 LZF 压缩 listpack。策略设为 allkeys-lfu，另有真实频率字段和绝对到期时间。
 
 样本生成后由 Redis 工具确认完整性，再在隔离 Redis 中重新加载，逐键核对 HLEN、HGET、String GET 和 PEXPIRETIME；MoonBit 测试独立比较语义和实际 RDB 类型，按无序字段比较，不从运行时 OBJECT ENCODING 推断文件类型。样本与预期数据的哈希见 [fixtures/README.md](../fixtures/README.md)。
 

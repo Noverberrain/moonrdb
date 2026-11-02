@@ -1,4 +1,4 @@
-# 兼容矩阵（F9）
+# 兼容矩阵（F10）
 
 通用 `parse` 支持文件结构、String、Hash、quicklist2 List、Set 与 Sorted Set。`parse_strings` 仍只接受 String；原 `parse_empty` 保留 F2 边界：拒绝对象及 AUX LZF。Stream、Module 等仍不支持。
 
@@ -60,4 +60,4 @@ F0 在 Windows x64、`moonc 0.10.18+6c83a7f62`、`moon 0.1.20261028` 下验证 n
 
 ## inspect CLI
 
-F8 已实现 Windows native `inspect`，使用同一解析 API 检查整个文件并显示版本、数据库、键数和校验状态；参数和退出行为见 [inspect.md](inspect.md)。stats 已实现，含前缀汇总和指定时刻的 TTL 分布，见 [stats.md](stats.md)；top / export 尚未实现。解析库根包 API 保持 F7 不变，新增系统依赖仅位于 CLI 包。
+F8 已实现 Windows native `inspect`，使用同一解析 API 检查整个文件并显示版本、数据库、键数和校验状态；参数和退出行为见 [inspect.md](inspect.md)。stats 已实现，含前缀汇总和指定时刻的 TTL 分布，见 [stats.md](stats.md)；top 已实现，见 [top.md](top.md)；export 尚未实现。解析库根包 API 保持 F7 不变，新增系统依赖仅位于 CLI 包。

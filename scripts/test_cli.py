@@ -1,6 +1,7 @@
 """Native CLI process checks: stdout, stderr, exit status and bounded file input."""
 
 import argparse
+import base64
 from pathlib import Path
 import subprocess
 import tempfile
@@ -51,6 +52,27 @@ def main():
         if expected not in output or f"keys: {keys}\n" not in output:
             raise AssertionError("Fixture checksum/key report mismatch")
 
+    for folder, name in [("redis-7.2.5", "empty"), ("redis-7.2.5-strings", "strings"),
+                         ("redis-7.2.5-hashes", "hashes"), ("redis-7.2.5-lists", "lists"),
+                         ("redis-7.2.5-sets", "sets"), ("redis-7.2.5-sorted-sets", "sorted-sets")]:
+        path = root / "fixtures" / folder / (name + ".rdb")
+        output = run(["top", path, "--limit", "10000"], 0, stdout_contains="status: complete")
+        rows = [dict(item.split("=", 1) for item in line.split()) for line in output.splitlines() if line.startswith("rank=")]
+        expected = sorted(rows, key=lambda row: (-int(row["serialized_bytes"]), int(row["db"]),
+                                                base64.b64decode(row["key_base64"]), int(row["record_start"])))
+        if rows != expected:
+            raise AssertionError("TopN ranking differs from Python full sort")
+        small = run(["top", path, "--by", "serialized-bytes", "--limit", "2"], 0)
+        small_rows = [line for line in small.splitlines() if line.startswith("rank=")]
+        all_rows = [line for line in output.splitlines() if line.startswith("rank=")]
+        if small_rows != all_rows[:2]:
+            raise AssertionError("TopN subset mismatch")
+    for bad in [["--limit", "0"], ["--limit", "10001"], ["--limit", "-1"],
+                ["--limit", "1_0"], ["--limit"], ["--by", "ram"],
+                ["--limit", "1", "--limit", "2"], ["--prefix", "a"]]:
+        run(["top", "f", *bad], 2, stderr_contains="invalid arguments")
+    run(["top", "--help"], 0, stdout_contains="moonrdb top")
+
     stats_file = root / "fixtures/redis-7.2.5-sorted-sets/sorted-sets.rdb"
     baseline = run(["stats", stats_file], 0, stdout_contains="expiry_evaluation: not_requested")
     for at, expected in [("2100-01-01T00:00:00.122Z", "ttl_le_1h: 1"),
@@ -94,6 +116,7 @@ def main():
         for name, data, message in cases:
             (work / name).write_bytes(data)
             run(["inspect", name], 1, stderr_contains=message, cwd=work)
+            run(["top", name], 1, stderr_contains=message, cwd=work)
             run(["stats", name, "--at", "1970-01-01T00:00:00Z"], 1, stderr_contains=message, cwd=work)
         # Actual Unicode and spaces in a native argv path, plus end-of-options.
         for name in ["快照 with spaces.rdb", "-snapshot.rdb"]:

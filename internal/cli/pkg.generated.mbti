@@ -15,6 +15,8 @@ pub async fn run(ArrayView[String]) -> Int32
 
 pub fn stats_report(@moonrdb.Snapshot, at_ms? : Int64?, prefixes? : Array[String]) -> String
 
+pub fn top_report(@moonrdb.Snapshot, Int32) -> String
+
 pub fn usage() -> String
 
 // Errors
@@ -26,6 +28,7 @@ pub fn UsageError::to_repr(Self) -> @debug.Repr
 // Types and methods
 pub(all) enum Command {
   Help
+  Top(path~ : String, max_input_bytes~ : Int32, limit~ : Int32)
   Stats(path~ : String, max_input_bytes~ : Int32, at_ms~ : Int64?, prefixes~ : Array[String])
   Inspect(path~ : String, max_input_bytes~ : Int32)
 } derive(Eq, @debug.Debug)

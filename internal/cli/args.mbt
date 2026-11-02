@@ -4,6 +4,7 @@
 ///|
 pub(all) enum Command {
   Help
+  Top(path~ : String, max_input_bytes~ : Int32, limit~ : Int32)
   Stats(
     path~ : String,
     max_input_bytes~ : Int32,
@@ -33,6 +34,7 @@ pub fn usage() -> String {
     #|Usage: moonrdb inspect <file.rdb> [--max-input-bytes <bytes>]
     #|       moonrdb stats <file.rdb> [--max-input-bytes <bytes>]
     #|       stats options: [--at YYYY-MM-DDTHH:MM:SS[.sss]Z] [--prefix <UTF-8 text>]...
+    #|       moonrdb top <file.rdb> [--by serialized-bytes] [--limit <1..10000>]
     #|       moonrdb --help
     #|
     #|Inspect a complete format-11 RDB snapshot (Redis 7.2.5 supported encodings).
@@ -77,11 +79,16 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
     | ["inspect", "--help"]
     | ["inspect", "-h"]
     | ["stats", "--help"]
-    | ["stats", "-h"] => Help
-    [name, .. rest] if name == "inspect" || name == "stats" => {
+    | ["stats", "-h"]
+    | ["top", "--help"]
+    | ["top", "-h"] => Help
+    [name, .. rest] if name == "inspect" || name == "stats" || name == "top" => {
       let mut path : String? = None
       let mut limit = 64 * 1024 * 1024
       let mut has_limit = false
+      let mut top_limit = 20
+      let mut has_top_limit = false
+      let mut has_by = false
       let mut at_ms : Int64? = None
       let prefixes : Array[String] = []
       let mut options = true
@@ -110,6 +117,22 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
             prefixes.push(value)
             continue tail
           }
+          ["--limit", value, .. tail] if options &&
+            name == "top" &&
+            !has_top_limit => {
+            top_limit = positive_limit(value)
+            if top_limit > 10000 {
+              raise InvalidArguments
+            }
+            has_top_limit = true
+            continue tail
+          }
+          ["--by", "serialized-bytes", .. tail] if options &&
+            name == "top" &&
+            !has_by => {
+            has_by = true
+            continue tail
+          }
           [value, .. tail] => {
             if value.is_empty() ||
               (options && value.has_prefix("-")) ||
@@ -122,7 +145,9 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
         }
       }
       guard path is Some(path) else { raise InvalidArguments }
-      if name == "stats" {
+      if name == "top" {
+        Top(path~, max_input_bytes=limit, limit=top_limit)
+      } else if name == "stats" {
         Stats(path~, max_input_bytes=limit, at_ms~, prefixes~)
       } else {
         Inspect(path~, max_input_bytes=limit)
