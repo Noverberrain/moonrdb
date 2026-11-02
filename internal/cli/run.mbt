@@ -46,7 +46,7 @@ pub async fn run(args : ArrayView[String]) -> Int32 {
       @stdio.stdout.text.write(usage())
       0
     }
-    Inspect(path~, max_input_bytes~) | Stats(path~, max_input_bytes~) => {
+    Inspect(path~, max_input_bytes~) | Stats(path~, max_input_bytes~, ..) => {
       let input = read_input(path, max_input_bytes) catch {
         InputLimit(size~, limit~) => {
           @stdio.stderr.text.write(
@@ -76,8 +76,8 @@ pub async fn run(args : ArrayView[String]) -> Int32 {
         }
       }
       @stdio.stdout.text.write(
-        if command is Stats(..) {
-          stats_report(snapshot)
+        if command is Stats(at_ms~, prefixes~, ..) {
+          stats_report(snapshot, at_ms~, prefixes~)
         } else {
           inspect_report(snapshot)
         },

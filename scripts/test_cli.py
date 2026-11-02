@@ -51,6 +51,23 @@ def main():
         if expected not in output or f"keys: {keys}\n" not in output:
             raise AssertionError("Fixture checksum/key report mismatch")
 
+    stats_file = root / "fixtures/redis-7.2.5-sorted-sets/sorted-sets.rdb"
+    baseline = run(["stats", stats_file], 0, stdout_contains="expiry_evaluation: not_requested")
+    for at, expected in [("2100-01-01T00:00:00.122Z", "ttl_le_1h: 1"),
+                         ("2100-01-01T00:00:00.123Z", "expired: 1"),
+                         ("2100-01-01T00:00:00.124Z", "expired: 1")]:
+        out = run(["stats", stats_file, "--at", at, "--prefix", "long-", "--prefix", ""], 0,
+                  stdout_contains=expected)
+        if "accounting_matches: true" not in out or "keys=1 serialized_bytes=" not in out:
+            raise AssertionError("Stats prefix or accounting mismatch")
+    for bad in [["--at", "2026-02-29T00:00:00Z"], ["--at", "0"],
+                ["--prefix"], ["--prefix", "a", "--prefix", "a"],
+                ["--at", "1970-01-01T00:00:00Z", "--at", "1970-01-01T00:00:00Z"]]:
+        run(["stats", stats_file, *bad], 2, stderr_contains="invalid arguments")
+    run(["stats", "--help"], 0, stdout_contains="stats options:")
+    if run(["stats", stats_file], 0) != baseline:
+        raise AssertionError("Default stats changed after reference-time invocation")
+
     for arguments in [["--help"], ["-h"], ["inspect", "--help"]]:
         run(arguments, 0, stdout_contains="Usage: moonrdb inspect")
     for arguments in [[], ["inspect"], ["export", "x"], ["inspect", "a", "b"],
@@ -77,6 +94,7 @@ def main():
         for name, data, message in cases:
             (work / name).write_bytes(data)
             run(["inspect", name], 1, stderr_contains=message, cwd=work)
+            run(["stats", name, "--at", "1970-01-01T00:00:00Z"], 1, stderr_contains=message, cwd=work)
         # Actual Unicode and spaces in a native argv path, plus end-of-options.
         for name in ["快照 with spaces.rdb", "-snapshot.rdb"]:
             (work / name).write_bytes(valid)
