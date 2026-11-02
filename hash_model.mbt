@@ -54,6 +54,8 @@ pub(all) enum RdbRecord {
   String(StringRecord)
   Hash(HashRecord)
   List(ListRecord)
+  Set(SetRecord)
+  SortedSet(SortedSetRecord)
 } derive(Debug, Eq)
 
 ///|

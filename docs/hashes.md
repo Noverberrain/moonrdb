@@ -2,7 +2,7 @@
 
 ## API 与数据模型
 
-`parse` 返回 `Snapshot`，其中 `records` 是按文件顺序保存的 `Array[RdbRecord]`，包含 `String(StringRecord)`、`Hash(HashRecord)`，F5 又增加 `List(ListRecord)`。本页描述 Hash 类型 4 / 16，List 类型 18 详见 [lists.md](lists.md)；未列出的类型、函数、模块仍明确失败。原 `read_header`、`parse_empty` 和 `parse_strings` 的签名及支持边界保持不变。
+`parse` 返回 `Snapshot`，其中 `records` 是按文件顺序保存的 `Array[RdbRecord]`，目前包含 String、Hash、List 和 Set。本页描述 Hash 类型 4 / 16，其他支持边界见兼容矩阵；未列出的类型、函数、模块仍明确失败。原 `read_header`、`parse_empty` 和 `parse_strings` 的签名及支持边界保持不变。
 
 `HashRecord` 与 String 记录一样保存数据库、原始键字节、键存储编码、到期／空闲／频率元信息、原文件记录区间及序列化体积。`storage` 为 `Hashtable`（RDB 类型 4，普通字段／值序列）或 `Listpack`（类型 16）；这描述文件表示，不是运行时内存测量。`packed_storage` 仅对 listpack 存在，记录外层 RDB 字符串为 Raw 或 Lzf 等表示。`entries` 是 `HashEntry { field, value }` 数组，保持文件顺序；Hash 语义无序，比较或迁移时不应依赖该顺序。
 
@@ -32,7 +32,7 @@ Hash 记录区间包含全部前置键元信息、类型、键与对象内容，
 
 ## 真实样本与测试范围
 
-F4 交付时 native 测试共 76 项（4 项文档测试），F5 中全部保留，当前完整测试为 91 项。502 字节真实快照包含 8 个 Hash 和 1 个 String，分布在 DB 0 / 2。固定 `hash-max-listpack-entries=4`、`hash-max-listpack-value=64`，覆盖：小 Hash、超过条目阈值、超过字段长度阈值、超过值长度阈值、二进制／空字段、整数极值、LZF 键与值以及 LZF 压缩 listpack。策略设为 allkeys-lfu，另有真实频率字段和绝对到期时间。
+F4 交付时 native 测试共 76 项（4 项文档测试），相关回归在后续阶段保留，当前完整测试为 135 项。502 字节真实快照包含 8 个 Hash 和 1 个 String，分布在 DB 0 / 2。固定 `hash-max-listpack-entries=4`、`hash-max-listpack-value=64`，覆盖：小 Hash、超过条目阈值、超过字段长度阈值、超过值长度阈值、二进制／空字段、整数极值、LZF 键与值以及 LZF 压缩 listpack。策略设为 allkeys-lfu，另有真实频率字段和绝对到期时间。
 
 样本生成后由 Redis 工具确认完整性，再在隔离 Redis 中重新加载，逐键核对 HLEN、HGET、String GET 和 PEXPIRETIME；MoonBit 测试独立比较语义和实际 RDB 类型，按无序字段比较，不从运行时 OBJECT ENCODING 推断文件类型。样本与预期数据的哈希见 [fixtures/README.md](../fixtures/README.md)。
 

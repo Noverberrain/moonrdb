@@ -2,7 +2,7 @@
 
 ## API 与有序元素
 
-通用 `parse` 新增 RDB 类型 18 `LIST_QUICKLIST_2`，返回 `RdbRecord::List(ListRecord)`。`parse_empty` 和 `parse_strings` 仍拒绝 List。已有消费者对 `RdbRecord` 做穷举匹配时，需要增加 List 分支。
+通用 `parse` 支持 RDB 类型 18 `LIST_QUICKLIST_2`，返回 `RdbRecord::List(ListRecord)`。`parse_empty` 和 `parse_strings` 仍拒绝 List。F6 又增加 Set 分支，消费者对 `RdbRecord` 做穷举匹配时应覆盖全部支持类型。
 
 `ListRecord` 保存数据库、键字节和键存储编码，原始到期／空闲／频率元信息，记录的半开字节区间与序列化体积。`items` 是严格按节点顺序和节点内部顺序拼接的二进制数组，保留重复值、空元素和整数的精确十进制字节。不会排序、去重、读取时钟或过滤过期键。
 
@@ -39,4 +39,4 @@ plain 元素受 `max_string_bytes` 约束；packed 容器受 `max_packed_bytes`�
 
 生成流程经 SAVE、Redis 完整性检查和第二个隔离 Redis 进程加载，逐项核对 LLEN、LINDEX、标记键及 PEXPIRETIME。MoonBit 测试再按原顺序比较全部字节、节点容器与存储形式、节点索引／字节范围和总文件体积。
 
-当前 native 测试共 91 项（含 5 项文档测试），F4 的 76 项全部保留。新增用例覆盖跨节点顺序、奇数与重复元素、空节点、未知容器、非法计数、旧格式拒绝、全文件节点／元素累计限制、共享解码预算、LZF 扩展上限及 listpack 内部错误。真实 List 文件的每个短前缀与每个字节最低位修改均被拒绝；未进行默认阈值大文件、其他 Redis 版本或性能验收。
+F5 交付时 native 测试共 91 项（含 5 项文档测试），相关回归在 F6 中保留，当前完整测试为 135 项。List 用例覆盖跨节点顺序、奇数与重复元素、空节点、未知容器、非法计数、旧格式拒绝、全文件节点／元素累计限制、共享解码预算、LZF 扩展上限及 listpack 内部错误。真实 List 文件的每个短前缀与每个字节最低位修改均被拒绝；未进行默认阈值大文件、其他 Redis 版本或性能验收。

@@ -66,7 +66,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--redis-bin", required=True, type=Path)
     parser.add_argument("--checksum", choices=["enabled", "disabled"], default="enabled")
-    parser.add_argument("--dataset", choices=["empty", "strings", "hashes", "lists"], default="empty")
+    parser.add_argument("--dataset", choices=["empty", "strings", "hashes", "lists", "sets", "sorted-sets"], default="empty")
     parser.add_argument("--policy", choices=["noeviction", "allkeys-lru", "allkeys-lfu"], default="noeviction")
     parser.add_argument("--output-dir", required=True, type=Path,
                         help="Must not exist; use .work/empty-regenerated for a new run")
@@ -93,15 +93,21 @@ def main():
         import hash_dataset as dataset
     elif args.dataset == "lists":
         import list_dataset as dataset
+    elif args.dataset == "sets":
+        import set_dataset as dataset
+    elif args.dataset == "sorted-sets":
+        import sorted_set_dataset as dataset
+    sorted_set_config = "zset-max-listpack-entries 4\nzset-max-listpack-value 64\n" if args.dataset == "sorted-sets" else ""
     hash_config = "hash-max-listpack-entries 4\nhash-max-listpack-value 64\n" if args.dataset == "hashes" else ""
     list_config = "list-max-listpack-size 2\nlist-compress-depth 1\nenable-debug-command local\n" if args.dataset == "lists" else ""
+    set_config = "set-max-intset-entries 4\nset-max-listpack-entries 4\nset-max-listpack-value 64\n" if args.dataset == "sets" else ""
     with tempfile.TemporaryDirectory(prefix="moonrdb-empty-") as temp:
         work = Path(temp)
         config = work / "redis.conf"
         config.write_text(
             f'bind 127.0.0.1\nport {port}\nrequirepass {password}\n'
             'protected-mode yes\ndaemonize no\nsave ""\nappendonly no\n'
-            f'databases 16\ndbfilename {filename}\nrdbchecksum {"yes" if args.checksum == "enabled" else "no"}\nrdbcompression yes\nmaxmemory-policy {args.policy}\n' + hash_config + list_config,
+            f'databases 16\ndbfilename {filename}\nrdbchecksum {"yes" if args.checksum == "enabled" else "no"}\nrdbcompression yes\nmaxmemory-policy {args.policy}\n' + hash_config + list_config + set_config + sorted_set_config,
             encoding="utf-8",
         )
         with (work / "server.log").open("wb") as log:
@@ -164,6 +170,13 @@ def main():
                         manifest["list_compress_depth"] = 1
                         manifest["test_plain_node_threshold"] = 64
                         manifest["test_plain_node_method"] = "DEBUG QUICKLIST-PACKED-THRESHOLD 64 in isolated generator only"
+                    if args.dataset == "sorted-sets":
+                        manifest["zset_max_listpack_entries"] = 4
+                        manifest["zset_max_listpack_value"] = 64
+                    if args.dataset == "sets":
+                        manifest["set_max_intset_entries"] = 4
+                        manifest["set_max_listpack_entries"] = 4
+                        manifest["set_max_listpack_value"] = 64
                     expected_data = (json.dumps(expected, indent=2) + "\n").encode("utf-8")
                     (args.output_dir / "expected.json").write_bytes(expected_data)
                     manifest["expected_sha256"] = hashlib.sha256(expected_data).hexdigest()

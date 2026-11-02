@@ -31,6 +31,9 @@ pub(all) suberror ParseError {
   InvalidHash(offset~ : Int32, reason~ : String)
   InvalidListpack(offset~ : Int32, inner_offset~ : Int32, reason~ : String)
   InvalidList(offset~ : Int32, reason~ : String)
+  InvalidSortedSet(offset~ : Int32, reason~ : String)
+  InvalidSet(offset~ : Int32, reason~ : String)
+  InvalidIntset(offset~ : Int32, inner_offset~ : Int32, reason~ : String)
 } derive(Debug)
 
 ///|

@@ -1,4 +1,4 @@
-# 真实快照样本（F0—F5）
+# 真实快照样本（F0—F7）
 
 `redis-7.2.5/empty.rdb` 是专用 Redis 7.2.5 实例执行 `SAVE` 的原始产物，未手工拼接或修改。
 
@@ -25,6 +25,12 @@ F5 新增 `redis-7.2.5-lists/lists.rdb`，737 字节，SHA256 为 `83e7766b43309
 
 List 配置固定为 `list-max-listpack-size=2`、`list-compress-depth=1`。plain 默认需要很大的元素；小型真实 plain 样本是在专用回环实例中启用本地 DEBUG，并执行 `DEBUG QUICKLIST-PACKED-THRESHOLD 64` 生成，条件完整写在 manifest。它仍是 Redis SAVE 的未修改产物，不是手工拼接；未验证默认 1 GiB 阈值规模。第二个进程重新加载同一文件，按 LLEN / LINDEX 比较每个元素顺序，核对 String / Hash 标记及 PEXPIRETIME。细节见 [List 约定](../docs/lists.md)。
 
+F6 新增 `redis-7.2.5-sets/sets.rdb`，560 字节，SHA256 为 `b28f0aaed3a744a3901c5d325aec949236a2b889baf9e7817a074f1eaf2cca85`，使用同一已核验构建。含 DB 0 / 2 的 10 个 Set（共 36 个成员）与三个其他类型标记键；覆盖普通、16 / 32 / 64 位 intset、listpack、二进制／空成员、阈值转换、LZF、LFU 和到期时间。生成依据为 `scripts/set_dataset.py`，预期字节及其哈希保存在对应目录。
+
+Set 配置固定为整数集合上限 4、listpack 成员上限 4、成员字节阈值 64，未修改服务器源码或二进制。SAVE 后通过 Redis 完整性检查，并在第二个隔离进程加载，按 SCARD 与逐成员 SISMEMBER 比较集合语义，核对标记键和 PEXPIRETIME；MoonBit 另行验证实际 RDB 类型与 intset 宽度，不以 OBJECT ENCODING 代替文件编码验证。细节见 [Set 约定](../docs/sets.md)。
+
+F7 新增 `redis-7.2.5-sorted-sets/sorted-sets.rdb`，486 字节，SHA256 为 `893f08953be7b15161ce29f967783755d1120f86d5eb2c600c308db9e64866b8`。同一已核验构建，固定 `zset-max-listpack-entries=4`、`zset-max-listpack-value=64`，使用 allkeys-lfu。含 DB 0 / 2 的 6 个 Sorted Set（20 个条目）与 String / Set 标记键，覆盖类型 5 / 17、二进制／空成员、分数边界、同分、LZF 和到期时间。生成依据 `scripts/sorted_set_dataset.py`，SAVE 前及第二个隔离进程加载后逐键核对 ZCARD / ZSCORE / PEXPIRETIME。原始 Redis 检查输出、Base64 预期值与 manifest 均保存，MoonBit 另行核对实际文件编码及所有分数。细节见 [Sorted Set 约定](../docs/sorted-sets.md)。
+
 ## 生成方法
 
 下载、核对归档哈希并解压后，在仓库根目录运行（把路径换成实际位置）：
@@ -35,6 +41,8 @@ python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset strings --policy allkeys-lru --output-dir .work/strings-regenerated
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset hashes --policy allkeys-lfu --output-dir .work/hashes-regenerated
 python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset lists --policy allkeys-lru --output-dir .work/lists-regenerated
+python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset sets --policy allkeys-lfu --output-dir .work/sets-regenerated
+python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2.5-Windows-x64-msys2' --dataset sorted-sets --policy allkeys-lfu --output-dir .work/sorted-sets-regenerated
 ```
 
 生成脚本使用 Python 标准库，不依赖 Python Redis 客户端。它启动临时实例，只绑定回环地址、使用随机端口及一次性密码，不安装服务，不连接已有 Redis，不执行 FLUSH。关键配置：16 个数据库、关闭定时保存和 AOF、开启 RDB 压缩，默认开启校验和，`--checksum disabled` 则关闭；`INFO keyspace` 确认空库后执行 `SAVE`，再调用同一套工具中的 `redis-check-rdb`。结束后清理实例和临时目录，已有输出目录会被拒绝覆盖。二进制需要 `redis-server` 和 `redis-check-rdb`；脚本也接受自行编译的 Linux Redis 7.2.5，但该路径尚未实测。
@@ -47,6 +55,6 @@ python -X utf8 scripts/generate_empty_fixture.py --redis-bin 'C:/tools/Redis-7.2
 python -X utf8 scripts/verify_fixtures.py
 ```
 
-此检查对五份样本合计执行 36 项身份核验：文件大小、SHA256、头部、尾部、校验模式及预期数据等，不实现解析或 CRC64。MoonBit 的 `moon test --target native` 另外解析两份空库、String、混合 Hash 与混合 List 快照，验证语义、实际编码、元信息与校验状态；Redis 工具的原始输出也保留用于对照。
+此检查对七份样本合计执行 52 项身份核验：文件大小、SHA256、头部、尾部、校验模式及预期数据等，不实现解析或 CRC64。MoonBit 的 `moon test --target native` 另外解析两份空库与五份有键快照，验证语义、实际编码、元信息与校验状态；Redis 工具的原始输出也保留用于对照。
 
 样本不含生产数据、密码或个人信息，作为本项目测试数据以 Apache-2.0 提供。仓库不分发 Redis 源码、Windows 工具或其动态库；Redis 7.2.5 的 [COPYING](https://github.com/redis/redis/blob/f60370ce28b946c1146dcea77c9c399d39601aaa/COPYING) 单独适用。下载和重新分发第三方工具时应保留其各组件许可。

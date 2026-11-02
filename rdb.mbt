@@ -72,6 +72,16 @@ pub fn parse_strings(
   let records = result.records.map(record => {
     match record {
       String(value) => value
+      SortedSet(value) =>
+        raise UnsupportedObjectType(
+          offset=value.record_start,
+          object_type=b'\x05',
+        )
+      Set(value) =>
+        raise UnsupportedObjectType(
+          offset=value.record_start,
+          object_type=b'\x02',
+        )
       List(value) =>
         raise UnsupportedObjectType(
           offset=value.record_start,
@@ -107,6 +117,10 @@ fn parse_snapshot(
   allow_strings~ : Bool,
   allow_hashes~ : Bool = false,
   allow_lists~ : Bool = false,
+  allow_sets~ : Bool = false,
+  allow_sorted_sets~ : Bool = false,
+  max_sorted_set_entries~ : Int32 = 100000,
+  max_set_members~ : Int32 = 100000,
   max_list_nodes~ : Int32 = 100000,
   max_list_items~ : Int32 = 100000,
   max_hash_entries~ : Int32 = 100000,
@@ -130,6 +144,8 @@ fn parse_snapshot(
       ("packed-bytes", max_packed_bytes),
       ("list-nodes", max_list_nodes),
       ("list-items", max_list_items),
+      ("set-members", max_set_members),
+      ("sorted-set-entries", max_sorted_set_entries),
     ] {
     if limit < 0 {
       raise InvalidResourceLimit(offset=0, resource~, limit~)
@@ -146,6 +162,11 @@ fn parse_snapshot(
     max_items: max_list_items,
     nodes: 0,
     items: 0,
+  }
+  let sets : SetBudget = { limit: max_set_members, used: 0, }
+  let sorted_sets : SortedSetBudget = {
+    limit: max_sorted_set_entries,
+    used: 0,
   }
   let mut record_bytes = 0UL
   let mut database = 0UL
@@ -221,6 +242,8 @@ fn parse_snapshot(
             allow_strings,
             allow_hashes,
             allow_lists,
+            allow_sets,
+            allow_sorted_sets,
           ) {
           raise UnsupportedObjectType(
             offset=prefix.type_offset,
@@ -235,14 +258,16 @@ fn parse_snapshot(
         )
         let record = reader.read_record(
           prefix, database, max_string_bytes, max_hash_entries, max_packed_bytes,
-          budget, lists,
+          budget, lists, sets, sorted_sets,
         )
         record_bytes += record_size(record)
         records.push(record)
       }
       _ =>
         if is_object_type(opcode) {
-          if !supported_type(opcode, allow_strings, allow_hashes, allow_lists) {
+          if !supported_type(
+              opcode, allow_strings, allow_hashes, allow_lists, allow_sets, allow_sorted_sets,
+            ) {
             raise UnsupportedObjectType(offset~, object_type=opcode)
           }
           check_resource_limit(
@@ -261,7 +286,7 @@ fn parse_snapshot(
           }
           let record = reader.read_record(
             prefix, database, max_string_bytes, max_hash_entries, max_packed_bytes,
-            budget, lists,
+            budget, lists, sets, sorted_sets,
           )
           record_bytes += record_size(record)
           records.push(record)
@@ -273,9 +298,11 @@ fn parse_snapshot(
 }
 
 ///|
-/// Parse a complete version-11 snapshot of supported String, Hash and List types.
+/// Parse a complete version-11 snapshot of supported String, Hash, List, Set and Sorted Set.
 /// Packed container scratch space is bounded separately from returned data.
 /// List node and item limits apply to the whole snapshot; empty items count.
+/// Set member and Sorted Set entry limits apply across the whole snapshot.
+/// Decoded bytes count member bytes; fixed-size scores and score scratch do not.
 ///
 /// ```mbt check
 /// test {
@@ -292,6 +319,24 @@ fn parse_snapshot(
 ///   guard result.records[0] is List(record) else { fail("expected List") }
 ///   assert_eq(record.items, [b"v"])
 /// }
+///
+/// test {
+///   let result = @moonrdb.parse(
+///     b"REDIS0011\x02\x00\x01\x01v\xff\x00\x00\x00\x00\x00\x00\x00\x00",
+///   )
+///   guard result.records[0] is Set(record) else { fail("expected Set") }
+///   assert_eq(record.members, [b"v"])
+/// }
+///
+/// test {
+///   let result = @moonrdb.parse(
+///     b"REDIS0011\x05\x00\x01\x01v\x00\x00\x00\x00\x00\x00\xf0\x3f\xff\x00\x00\x00\x00\x00\x00\x00\x00",
+///   )
+///   guard result.records[0] is SortedSet(record) else {
+///     fail("expected Sorted Set")
+///   }
+///   assert_eq(record.entries[0].score, 1.0)
+/// }
 /// ```
 pub fn parse(
   input : Bytes,
@@ -304,6 +349,8 @@ pub fn parse(
   max_packed_bytes~ : Int32 = 4 * 1024 * 1024,
   max_list_nodes~ : Int32 = 100000,
   max_list_items~ : Int32 = 100000,
+  max_set_members~ : Int32 = 100000,
+  max_sorted_set_entries~ : Int32 = 100000,
 ) -> Snapshot raise ParseError {
   parse_snapshot(
     input,
@@ -315,6 +362,10 @@ pub fn parse(
     allow_strings=true,
     allow_hashes=true,
     allow_lists=true,
+    allow_sets=true,
+    allow_sorted_sets=true,
+    max_sorted_set_entries~,
+    max_set_members~,
     max_list_nodes~,
     max_list_items~,
     max_hash_entries~,
@@ -328,10 +379,14 @@ fn supported_type(
   strings : Bool,
   hashes : Bool,
   lists : Bool,
+  sets : Bool,
+  sorted_sets : Bool,
 ) -> Bool {
   (strings && value == b'\x00') ||
   (hashes && (value == b'\x04' || value == b'\x10')) ||
-  (lists && value == b'\x12')
+  (lists && value == b'\x12') ||
+  (sets && (value == b'\x02' || value == b'\x0b' || value == b'\x14')) ||
+  (sorted_sets && (value == b'\x05' || value == b'\x11'))
 }
 
 ///|
@@ -340,6 +395,8 @@ fn record_size(record : RdbRecord) -> UInt64 {
     String(value) => value.serialized_bytes
     Hash(value) => value.serialized_bytes
     List(value) => value.serialized_bytes
+    Set(value) => value.serialized_bytes
+    SortedSet(value) => value.serialized_bytes
   }
 }
 
@@ -353,9 +410,25 @@ fn Reader::read_record(
   max_packed_bytes : Int32,
   budget : DecodeBudget,
   lists : ListBudget,
+  sets : SetBudget,
+  sorted_sets : SortedSetBudget,
 ) -> RdbRecord raise ParseError {
   if prefix.object_type == b'\x00' {
     String(self.read_string_record(prefix, database, max_string_bytes, budget))
+  } else if prefix.object_type == b'\x02' ||
+    prefix.object_type == b'\x0b' ||
+    prefix.object_type == b'\x14' {
+    Set(
+      self.read_set_record(
+        prefix, database, max_string_bytes, max_packed_bytes, budget, sets,
+      ),
+    )
+  } else if prefix.object_type == b'\x05' || prefix.object_type == b'\x11' {
+    SortedSet(
+      self.read_sorted_set_record(
+        prefix, database, max_string_bytes, max_packed_bytes, budget, sorted_sets,
+      ),
+    )
   } else if prefix.object_type == b'\x12' {
     List(
       self.read_list_record(

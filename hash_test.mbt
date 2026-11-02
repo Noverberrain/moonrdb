@@ -154,7 +154,7 @@ test "generic parser preserves narrow API boundaries and rejects legacy Hash for
   assert_true(
     empty_error(input) is UnsupportedObjectType(object_type=b'\x04', ..),
   )
-  for value in [9, 13, 1, 2, 5] {
+  for value in [9, 13, 1, 3] {
     assert_true(
       hash_error(empty_file(([value.to_byte()] : Bytes)))
       is UnsupportedObjectType(..),
@@ -263,6 +263,8 @@ async test "real mixed Hash snapshot verifies both encodings and persisted seman
   let mut strings = 0
   for record in result.records {
     let (start, end, size) = match record {
+      SortedSet(_) => fail("unexpected Sorted Set")
+      Set(_) => fail("unexpected Set in Hash fixture")
       List(_) => fail("unexpected List in Hash fixture")
       Hash(value) =>
         (value.record_start, value.record_end, value.serialized_bytes)

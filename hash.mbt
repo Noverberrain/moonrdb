@@ -18,7 +18,11 @@ fn Reader::read_hash_record(
     resource="string-bytes",
   )
   let offset = self.pos
-  let (entries, storage, packed_storage) = if prefix.object_type == b'\x04' {
+  let (entries, storage, packed_storage) : (
+    Array[HashEntry],
+    HashStorage,
+    StringStorage?,
+  ) = if prefix.object_type == b'\x04' {
     let count = self.read_count()
     check_resource_limit("hash-entries", offset, count, max_hash_entries)
     if count == 0UL {

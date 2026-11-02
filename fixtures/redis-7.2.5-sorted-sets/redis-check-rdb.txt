@@ -1,0 +1,13 @@
+[offset 0] Checking RDB file sorted-sets.rdb
+[offset 26] AUX FIELD redis-ver = '7.2.5'
+[offset 40] AUX FIELD redis-bits = '64'
+[offset 52] AUX FIELD ctime = '1793531906'
+[offset 67] AUX FIELD used-mem = '975672'
+[offset 79] AUX FIELD aof-base = '0'
+[offset 81] Selecting DB ID 0
+[offset 283] Selecting DB ID 2
+[offset 486] Checksum OK
+[offset 486] \o/ RDB looks OK! \o/
+[info] 8 keys read
+[info] 1 expires
+[info] 0 already expired

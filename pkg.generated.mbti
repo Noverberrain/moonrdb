@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn parse(Bytes, max_input_bytes? : Int32, max_string_bytes? : Int32, max_metadata_entries? : Int32, max_records? : Int32, max_decoded_bytes? : Int32, max_hash_entries? : Int32, max_packed_bytes? : Int32, max_list_nodes? : Int32, max_list_items? : Int32) -> Snapshot raise ParseError
+pub fn parse(Bytes, max_input_bytes? : Int32, max_string_bytes? : Int32, max_metadata_entries? : Int32, max_records? : Int32, max_decoded_bytes? : Int32, max_hash_entries? : Int32, max_packed_bytes? : Int32, max_list_nodes? : Int32, max_list_items? : Int32, max_set_members? : Int32, max_sorted_set_entries? : Int32) -> Snapshot raise ParseError
 
 pub fn parse_empty(Bytes, max_input_bytes? : Int32, max_string_bytes? : Int32, max_metadata_entries? : Int32) -> EmptySnapshot raise ParseError
 
@@ -38,6 +38,9 @@ pub(all) suberror ParseError {
   InvalidHash(offset~ : Int32, reason~ : String)
   InvalidListpack(offset~ : Int32, inner_offset~ : Int32, reason~ : String)
   InvalidList(offset~ : Int32, reason~ : String)
+  InvalidSortedSet(offset~ : Int32, reason~ : String)
+  InvalidSet(offset~ : Int32, reason~ : String)
+  InvalidIntset(offset~ : Int32, inner_offset~ : Int32, reason~ : String)
 } derive(@debug.Debug)
 pub fn ParseError::to_repr(Self) -> @debug.Repr
 
@@ -154,10 +157,39 @@ pub(all) enum RdbRecord {
   String(StringRecord)
   Hash(HashRecord)
   List(ListRecord)
+  Set(SetRecord)
+  SortedSet(SortedSetRecord)
 } derive(Eq, @debug.Debug)
 pub fn RdbRecord::equal(Self, Self) -> Bool
 pub fn RdbRecord::not_equal(Self, Self) -> Bool
 pub fn RdbRecord::to_repr(Self) -> @debug.Repr
+
+pub(all) struct SetRecord {
+  database : UInt64
+  key : Bytes
+  key_storage : StringStorage
+  members : Array[Bytes]
+  storage : SetStorage
+  packed_storage : StringStorage?
+  expires_at_ms : Int64?
+  idle_seconds : UInt64?
+  frequency : Byte?
+  record_start : Int32
+  record_end : Int32
+  serialized_bytes : UInt64
+} derive(Eq, @debug.Debug)
+pub fn SetRecord::equal(Self, Self) -> Bool
+pub fn SetRecord::not_equal(Self, Self) -> Bool
+pub fn SetRecord::to_repr(Self) -> @debug.Repr
+
+pub(all) enum SetStorage {
+  Hashtable
+  Intset(Int32)
+  Listpack
+} derive(Eq, @debug.Debug)
+pub fn SetStorage::equal(Self, Self) -> Bool
+pub fn SetStorage::not_equal(Self, Self) -> Bool
+pub fn SetStorage::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Snapshot {
   format_version : Int32
@@ -172,6 +204,40 @@ pub(all) struct Snapshot {
 pub fn Snapshot::equal(Self, Self) -> Bool
 pub fn Snapshot::not_equal(Self, Self) -> Bool
 pub fn Snapshot::to_repr(Self) -> @debug.Repr
+
+pub(all) struct SortedSetEntry {
+  element : Bytes
+  score : Double
+} derive(Eq, @debug.Debug)
+pub fn SortedSetEntry::equal(Self, Self) -> Bool
+pub fn SortedSetEntry::not_equal(Self, Self) -> Bool
+pub fn SortedSetEntry::to_repr(Self) -> @debug.Repr
+
+pub(all) struct SortedSetRecord {
+  database : UInt64
+  key : Bytes
+  key_storage : StringStorage
+  entries : Array[SortedSetEntry]
+  storage : SortedSetStorage
+  packed_storage : StringStorage?
+  expires_at_ms : Int64?
+  idle_seconds : UInt64?
+  frequency : Byte?
+  record_start : Int32
+  record_end : Int32
+  serialized_bytes : UInt64
+} derive(Eq, @debug.Debug)
+pub fn SortedSetRecord::equal(Self, Self) -> Bool
+pub fn SortedSetRecord::not_equal(Self, Self) -> Bool
+pub fn SortedSetRecord::to_repr(Self) -> @debug.Repr
+
+pub(all) enum SortedSetStorage {
+  BinaryDouble
+  Listpack
+} derive(Eq, @debug.Debug)
+pub fn SortedSetStorage::equal(Self, Self) -> Bool
+pub fn SortedSetStorage::not_equal(Self, Self) -> Bool
+pub fn SortedSetStorage::to_repr(Self) -> @debug.Repr
 
 pub(all) struct StringRecord {
   database : UInt64
