@@ -22,6 +22,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'MoonBit tests failed' }
     moon build --target native
     if ($LASTEXITCODE -ne 0) { throw 'MoonBit build failed' }
+    python -X utf8 scripts/test_cli.py --exe _build/native/debug/build/cmd/main/main.exe --example _build/native/debug/build/examples/parse/parse.exe
+    if ($LASTEXITCODE -ne 0) { throw 'Native CLI process checks failed' }
     $interfacesBefore = Get-InterfaceFingerprints
     moon info --target native
     if ($LASTEXITCODE -ne 0) { throw 'MoonBit interface generation failed' }

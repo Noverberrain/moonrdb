@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Noverberrain/moonrdb/internal/cli"
+
+import {
+  "Noverberrain/moonrdb",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn inspect_report(@moonrdb.Snapshot) -> String
+
+pub fn parse_args(ArrayView[String]) -> Command raise UsageError
+
+pub async fn run(ArrayView[String]) -> Int32
+
+pub fn usage() -> String
+
+// Errors
+pub(all) suberror UsageError {
+  InvalidArguments
+} derive(@debug.Debug)
+pub fn UsageError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) enum Command {
+  Help
+  Inspect(path~ : String, max_input_bytes~ : Int32)
+} derive(Eq, @debug.Debug)
+pub fn Command::equal(Self, Self) -> Bool
+pub fn Command::not_equal(Self, Self) -> Bool
+pub fn Command::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

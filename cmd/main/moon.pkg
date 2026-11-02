@@ -1,3 +1,9 @@
 supported_targets = "native"
 
+import {
+  "Noverberrain/moonrdb/internal/cli",
+  "moonbitlang/core/async",
+  "moonbitlang/core/env",
+}
+
 pkgtype(kind: "executable")

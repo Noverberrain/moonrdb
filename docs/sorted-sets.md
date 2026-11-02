@@ -27,10 +27,10 @@
 
 ## 验证与边界
 
-当前 Windows native 完整测试为 135 项（含 7 项文档测试）。新增用例覆盖分数位模式、二进制和空成员、重复成员、空集合、同分排序、未知／错误计数、奇数配对、非法文本、预算与溢出、旧 API 边界、压缩容器错误偏移，以及真实文件全部短前缀和逐字节单比特损坏。
+当前 Windows native 完整测试为 142 项（含 7 项文档测试）。新增用例覆盖分数位模式、二进制和空成员、重复成员、空集合、同分排序、未知／错误计数、奇数配对、非法文本、预算与溢出、旧 API 边界、压缩容器错误偏移，以及真实文件全部短前缀和逐字节单比特损坏。
 
 真实样本 `fixtures/redis-7.2.5-sorted-sets/sorted-sets.rdb` 为未修改的 Redis SAVE 产物：486 字节，6 个 Sorted Set（20 个条目）、String / Set 标记键，分布于 DB 0 / 2。固定 listpack 阈值 4 条目／64 字节，覆盖两种表示、±∞、极小次正规数、最大有限数、十进制与指数、同分、LZF 键与容器、LFU 和绝对到期时间。合成负零位测试独立于 Redis 是否在保存中归一化零。
 
 使用与前几阶段相同的已核验第三方 Windows Redis 7.2.5 构建。生成器 SAVE 前核对 ZCARD / ZSCORE，SAVE 后运行 redis-check-rdb，再由第二个隔离进程加载同一文件并逐键核对分数及 PEXPIRETIME。MoonBit 测试另外核对实际 RDB 类型、所有成员分数、元信息、压缩标记和字节区间；没有用内存 OBJECT ENCODING 代替文件编码验证。来源和复现步骤见 [样本说明](../fixtures/README.md)。
 
-本阶段只验证 Windows native 和这些明确编码，不代表支持所有 Redis 版本、所有类型或性能规模。inspect / stats / top / export 留待后续阶段。
+本阶段只验证 Windows native 和这些明确编码，不代表支持所有 Redis 版本、所有类型或性能规模。inspect 已在 F8 实现；stats / top / export 留待后续阶段。

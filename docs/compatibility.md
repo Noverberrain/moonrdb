@@ -1,4 +1,4 @@
-# 兼容矩阵（F7）
+# 兼容矩阵（F8）
 
 通用 `parse` 支持文件结构、String、Hash、quicklist2 List、Set 与 Sorted Set。`parse_strings` 仍只接受 String；原 `parse_empty` 保留 F2 边界：拒绝对象及 AUX LZF。Stream、Module 等仍不支持。
 
@@ -57,3 +57,7 @@ F7 支持二进制 double 与 listpack Sorted Set，核对配对、成员唯一�
 ## 工具链与执行环境
 
 F0 在 Windows x64、`moonc 0.10.18+6c83a7f62`、`moon 0.1.20261028` 下验证 native 后端。CI 固定同版本编译器与 core，归档 SHA256 写在安装脚本中。未验证其他后端或 Linux / macOS 构建。
+
+## inspect CLI
+
+F8 已实现 Windows native `inspect`，使用同一解析 API 检查整个文件并显示版本、数据库、键数和校验状态；参数和退出行为见 [inspect.md](inspect.md)。stats / top / export 尚未实现。解析库根包 API 保持 F7 不变，新增系统依赖仅位于 CLI 包。

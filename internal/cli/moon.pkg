@@ -1,0 +1,8 @@
+supported_targets = "native"
+
+import {
+  "Noverberrain/moonrdb",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/stdio",
+  "moonbitlang/core/debug",
+}

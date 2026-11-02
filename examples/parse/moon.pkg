@@ -1,0 +1,5 @@
+import {
+  "Noverberrain/moonrdb",
+}
+
+pkgtype(kind: "executable")
