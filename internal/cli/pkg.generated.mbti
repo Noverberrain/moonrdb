@@ -13,6 +13,8 @@ pub fn parse_args(ArrayView[String]) -> Command raise UsageError
 
 pub async fn run(ArrayView[String]) -> Int32
 
+pub fn stats_report(@moonrdb.Snapshot) -> String
+
 pub fn usage() -> String
 
 // Errors
@@ -24,6 +26,7 @@ pub fn UsageError::to_repr(Self) -> @debug.Repr
 // Types and methods
 pub(all) enum Command {
   Help
+  Stats(path~ : String, max_input_bytes~ : Int32)
   Inspect(path~ : String, max_input_bytes~ : Int32)
 } derive(Eq, @debug.Debug)
 pub fn Command::equal(Self, Self) -> Bool

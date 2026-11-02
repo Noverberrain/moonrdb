@@ -4,6 +4,7 @@
 ///|
 pub(all) enum Command {
   Help
+  Stats(path~ : String, max_input_bytes~ : Int32)
   Inspect(path~ : String, max_input_bytes~ : Int32)
 } derive(Debug, Eq)
 
@@ -25,6 +26,7 @@ pub extend UsageError with @debug.Debug::{to_repr}
 pub fn usage() -> String {
   let text =
     #|Usage: moonrdb inspect <file.rdb> [--max-input-bytes <bytes>]
+    #|       moonrdb stats <file.rdb> [--max-input-bytes <bytes>]
     #|       moonrdb --help
     #|
     #|Inspect a complete format-11 RDB snapshot (Redis 7.2.5 supported encodings).
@@ -65,7 +67,7 @@ fn positive_limit(text : String) -> Int32 raise UsageError {
 pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
   match args {
     ["--help"] | ["-h"] | ["inspect", "--help"] | ["inspect", "-h"] => Help
-    ["inspect", .. rest] => {
+    [name, .. rest] if name == "inspect" || name == "stats" => {
       let mut path : String? = None
       let mut limit = 64 * 1024 * 1024
       let mut has_limit = false
@@ -94,7 +96,11 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
         }
       }
       guard path is Some(path) else { raise InvalidArguments }
-      Inspect(path~, max_input_bytes=limit)
+      if name == "stats" {
+        Stats(path~, max_input_bytes=limit)
+      } else {
+        Inspect(path~, max_input_bytes=limit)
+      }
     }
     _ => raise InvalidArguments
   }
