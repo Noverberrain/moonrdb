@@ -26,6 +26,6 @@ moon run cmd/main --target native -- top fixtures/redis-7.2.5-sorted-sets/sorted
 
 ## 验证
 
-Windows native：153 项 MoonBit 测试与 85 项 CLI 进程检查通过。七份真实快照的全部小 limit 与全量排序参考结果对照；另测同体积数据库／二进制键／重复键的顺序、候选替换、不同长度键字典序、300 条合成记录、边界和非法参数。原生命令行还由 Python 解码 Base64，独立全量排序核对真实样本结果及 limit 子集，并验证失败时 stdout 为空。
+F10 交付时 Windows native：153 项 MoonBit 测试与 85 项 CLI 进程检查通过。七份真实快照的全部小 limit 与全量排序参考结果对照；另测同体积数据库／二进制键／重复键的顺序、候选替换、不同长度键字典序、300 条合成记录、边界和非法参数。原生命令行还由 Python 解码 Base64，独立全量排序核对真实样本结果及 limit 子集，并验证失败时 stdout 为空。
 
-完整检查为 `./scripts/ci.ps1`。本地检查不代表远端 Actions 已运行；F11 JSONL 导出与 F12 发布／独立消费者验收留待后续阶段。
+完整检查为 `./scripts/ci.ps1`。本地检查不代表远端 Actions 已运行；F11 JSONL 导出已实现；F12 发布／独立消费者验收留待后续阶段。

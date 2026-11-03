@@ -92,7 +92,7 @@ def main():
 
     for arguments in [["--help"], ["-h"], ["inspect", "--help"]]:
         run(arguments, 0, stdout_contains="Usage: moonrdb inspect")
-    for arguments in [[], ["inspect"], ["export", "x"], ["inspect", "a", "b"],
+    for arguments in [[], ["inspect"], ["unknown", "x"], ["inspect", "a", "b"],
                       ["inspect", "a", "--at", "0"], ["inspect", "--max-input-bytes"],
                       ["inspect", "a", "--max-input-bytes", "2147483648"],
                       ["inspect", "a", "--max-input-bytes", "0"],

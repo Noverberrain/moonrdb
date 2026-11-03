@@ -28,6 +28,7 @@ pub fn UsageError::to_repr(Self) -> @debug.Repr
 // Types and methods
 pub(all) enum Command {
   Help
+  Export(path~ : String, max_input_bytes~ : Int32, db~ : UInt64?, prefix~ : String?, output~ : String?)
   Top(path~ : String, max_input_bytes~ : Int32, limit~ : Int32)
   Stats(path~ : String, max_input_bytes~ : Int32, at_ms~ : Int64?, prefixes~ : Array[String])
   Inspect(path~ : String, max_input_bytes~ : Int32)

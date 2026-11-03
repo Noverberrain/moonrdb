@@ -48,7 +48,8 @@ pub async fn run(args : ArrayView[String]) -> Int32 {
     }
     Inspect(path~, max_input_bytes~)
     | Stats(path~, max_input_bytes~, ..)
-    | Top(path~, max_input_bytes~, ..) => {
+    | Top(path~, max_input_bytes~, ..)
+    | Export(path~, max_input_bytes~, ..) => {
       let input = read_input(path, max_input_bytes) catch {
         InputLimit(size~, limit~) => {
           @stdio.stderr.text.write(
@@ -76,6 +77,17 @@ pub async fn run(args : ArrayView[String]) -> Int32 {
           @stdio.stderr.text.write("moonrdb: parse failed: \{repr(error)}\n")
           return 1
         }
+      }
+      if command is Export(db~, prefix~, output~, ..) {
+        export_snapshot(snapshot, path, db, prefix, output) catch {
+          _ => {
+            @stdio.stderr.text.write(
+              "moonrdb: export failed; no completion recorded\n",
+            )
+            return 1
+          }
+        }
+        return 0
       }
       @stdio.stdout.text.write(
         if command is Stats(at_ms~, prefixes~, ..) {

@@ -20,7 +20,7 @@ test "help accepts only explicit complete forms" {
       [],
       ["inspect"],
       ["--help", "x"],
-      ["export", "x"],
+      ["unknown", "x"],
       ["inspect", "x", "--help"],
     ] {
     usage_fails(args)

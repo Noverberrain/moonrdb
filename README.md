@@ -4,11 +4,11 @@
 
 ## 当前状态
 
-已完成 F0 工程骨架、F1 基础读取、F2 空库解析、F3 String 与 LZF、F4 Hash、F5 List，F6 Set 三种表示，F7 Sorted Set 两种表示解码，F8 inspect CLI 与最小库示例、F9 stats 和 F10 TopN。
+已完成 F0 工程骨架、F1 基础读取、F2 空库解析、F3 String 与 LZF、F4 Hash、F5 List，F6 Set 三种表示，F7 Sorted Set 两种表示解码，F8 inspect CLI 与最小库示例、F9 stats、F10 TopN 和 F11 JSONL 导出。
 公开 API `read_header` 只读取头部，**不验证剩余文件内容、EOF 或 CRC64**。
 公开 API `parse_empty` 可完整检查支持范围内的无对象快照，保留 AUX、数据库选择和容量提示，并区分校验通过与关闭校验和。
 `parse_strings` 保留只接受 String 的边界。通用 `parse` 返回 `Snapshot`，其 `RdbRecord` 可为 String、Hash、List、Set 或 SortedSet。Set 支持类型 2 普通成员序列、11 intset 和 20 listpack；检查成员唯一性与编码完整性，受全文件累计成员数限制。
-Sorted Set 支持类型 5 二进制 double 与 17 listpack，返回原始成员和 Double 分数，拒绝 NaN、重复成员与损坏结构。`inspect` 已可检查格式版本、数据库、键数和完整性；`stats` 已支持数据库／类型／前缀体积汇总、指定时刻的过期状态和 TTL 分布；`top` 已支持按序列化体积排名，显示类型、编码和元素数量；export 尚未实现。
+Sorted Set 支持类型 5 二进制 double 与 17 listpack，返回原始成员和 Double 分数，拒绝 NaN、重复成员与损坏结构。`inspect` 已可检查格式版本、数据库、键数和完整性；`stats` 已支持数据库／类型／前缀体积汇总、指定时刻的过期状态和 TTL 分布；`top` 已支持按序列化体积排名，显示类型、编码和元素数量；`export` 已支持数据库／前缀过滤和 JSONL 输出，保留二进制与宽整数精度。
 
 ## 本地开发
 
@@ -26,7 +26,7 @@ moon run examples/parse --target native
 python -X utf8 scripts/verify_fixtures.py
 ```
 
-当前 `moon test --target native` 为 **153 项测试**（含 7 项文档测试），覆盖七份真实快照及合成异常输入。有键快照覆盖 String、Hash、List、Set、Sorted Set，包含数据库切换、LRU / LFU 和到期时间，并经隔离 Redis 重新加载逐键核对。Set 样本覆盖三种表示及所有 intset 宽度；新增 Sorted Set 样本含 6 个 Sorted Set 与两个混合类型键，覆盖两种表示及分数边界。List 的 plain 节点使用官方 DEBUG 命令降低阈值生成，不代表默认阈值下的大数据验收。旧秒编码仍只有合成测试。文件读取放在 native CLI 与测试中，库本身不依赖文件系统。
+当前 `moon test --target native` 为 **155 项测试**（含 7 项文档测试），覆盖七份真实快照及合成异常输入。有键快照覆盖 String、Hash、List、Set、Sorted Set，包含数据库切换、LRU / LFU 和到期时间，并经隔离 Redis 重新加载逐键核对。Set 样本覆盖三种表示及所有 intset 宽度；新增 Sorted Set 样本含 6 个 Sorted Set 与两个混合类型键，覆盖两种表示及分数边界。List 的 plain 节点使用官方 DEBUG 命令降低阈值生成，不代表默认阈值下的大数据验收。旧秒编码仍只有合成测试。文件读取放在 native CLI 与测试中，库本身不依赖文件系统。
 Python 离线检查核对七份样本及预期数据的身份，完整解析与 CRC64 由 MoonBit 测试验证。另有 85 项原生 CLI 进程检查，覆盖退出码、标准输出／错误流、异常文件、路径和输入上限。
 
 ## inspect 用法
@@ -52,6 +52,14 @@ moon run cmd/main --target native -- top fixtures/redis-7.2.5-sorted-sets/sorted
 ```
 
 默认返回体积最大的 20 条记录，键以 Base64 展示；同体积排序固定，候选最多 N 条。完整参数、排序与资源边界见 [top 文档](docs/top.md)。
+
+## JSONL 导出
+
+```powershell
+moon run cmd/main --target native -- export fixtures/redis-7.2.5-sorted-sets/sorted-sets.rdb --db 2 --prefix long- --format jsonl --output snapshot.jsonl
+```
+
+不指定 output 时 stdout 只含 JSONL；完成状态写 stderr。二进制统一 Base64，宽整数写字符串，Sorted Set 保留 IEEE 分数位模式。文件先写同目录临时文件，完整成功后替换目标。详见 [导出约定](docs/export.md)。另有 39 项导出进程检查验证还原和文件失败保护。
 
 ## 库调用示例
 
@@ -84,4 +92,4 @@ let snapshot = @moonrdb.parse(bytes) // Snapshot，records 中的 String / Hash 
 - 提供可复用解析 API，以及 inspect、stats、top 和 export 命令。
 - 统计快照中的序列化体积；该数值不代表 Redis 运行时内存占用。
 
-下一阶段为 F11：带过滤的 JSONL 导出。当前版本尚未发布到 Mooncakes；上述导入示例需先使用本地源码，不能直接从 Mooncakes 安装本项目。
+下一阶段为 F12：独立消费者、发布材料和验收演示。当前版本尚未发布到 Mooncakes；上述导入示例需先使用本地源码，不能直接从 Mooncakes 安装本项目。
