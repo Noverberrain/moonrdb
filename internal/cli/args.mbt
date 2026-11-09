@@ -4,6 +4,14 @@
 ///|
 pub(all) enum Command {
   Help
+  Diff(
+    before~ : String,
+    after~ : String,
+    max_input_bytes~ : Int32,
+    db~ : UInt64?,
+    prefix~ : String?,
+    limit~ : Int32
+  )
   Export(
     path~ : String,
     max_input_bytes~ : Int32,
@@ -43,6 +51,7 @@ pub fn usage() -> String {
     #|       stats options: [--at YYYY-MM-DDTHH:MM:SS[.sss]Z] [--prefix <UTF-8 text>]...
     #|       moonrdb top <file.rdb> [--by serialized-bytes] [--limit <1..10000>]
     #|       moonrdb export <file.rdb> [--db <id>] [--prefix <UTF-8 text>] [--format jsonl] [--output <file>]
+    #|       moonrdb diff <before.rdb> <after.rdb> [--db <id>] [--prefix <text>] [--limit <1..10000>]
     #|       moonrdb --help
     #|
     #|Inspect a complete format-11 RDB snapshot (Redis 7.2.5 supported encodings).
@@ -83,6 +92,8 @@ fn positive_limit(text : String) -> Int32 raise UsageError {
 pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
   match args {
     ["--help"]
+    | ["diff", "--help"]
+    | ["diff", "-h"]
     | ["-h"]
     | ["inspect", "--help"]
     | ["inspect", "-h"]
@@ -95,8 +106,10 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
     [name, .. rest] if name == "inspect" ||
       name == "stats" ||
       name == "top" ||
-      name == "export" => {
+      name == "export" ||
+      name == "diff" => {
       let mut path : String? = None
+      let mut after : String? = None
       let mut limit = 64 * 1024 * 1024
       let mut has_limit = false
       let mut top_limit = 20
@@ -127,8 +140,8 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
             continue tail
           }
           ["--prefix", value, .. tail] if options &&
-            (name == "stats" || name == "export") => {
-            if name == "export" && !prefixes.is_empty() {
+            (name == "stats" || name == "export" || name == "diff") => {
+            if name != "stats" && !prefixes.is_empty() {
               raise InvalidArguments
             }
             if prefixes.contains(value) || prefixes.length() >= 64 {
@@ -138,7 +151,7 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
             continue tail
           }
           ["--limit", value, .. tail] if options &&
-            name == "top" &&
+            (name == "top" || name == "diff") &&
             !has_top_limit => {
             top_limit = positive_limit(value)
             if top_limit > 10000 {
@@ -153,7 +166,9 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
             has_by = true
             continue tail
           }
-          ["--db", value, .. tail] if options && name == "export" && db is None => {
+          ["--db", value, .. tail] if options &&
+            (name == "export" || name == "diff") &&
+            db is None => {
             db = Some(database_number(value))
             continue tail
           }
@@ -175,16 +190,30 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
           [value, .. tail] => {
             if value.is_empty() ||
               (options && value.has_prefix("-")) ||
-              path is Some(_) {
+              (path is Some(_) && (name != "diff" || after is Some(_))) {
               raise InvalidArguments
             }
-            path = Some(value)
+            if path is None {
+              path = Some(value)
+            } else {
+              after = Some(value)
+            }
             continue tail
           }
         }
       }
       guard path is Some(path) else { raise InvalidArguments }
-      if name == "export" {
+      if name == "diff" {
+        guard after is Some(after) else { raise InvalidArguments }
+        Diff(
+          before=path,
+          after~,
+          max_input_bytes=limit,
+          db~,
+          prefix=prefixes.get(0),
+          limit=top_limit,
+        )
+      } else if name == "export" {
         Export(
           path~,
           max_input_bytes=limit,

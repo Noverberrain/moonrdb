@@ -103,6 +103,27 @@ def main():
     with tempfile.TemporaryDirectory(prefix="moonrdb-cli-") as temp:
         work = Path(temp)
         valid = (root / "fixtures/redis-7.2.5/empty.rdb").read_bytes()
+        def diff_fixture(name, body):
+            (work / name).write_bytes(b"REDIS0011" + body + b"\xff" + bytes(8))
+
+        diff_fixture("before.rdb", b"\x00\x01a\x01v\x00\x01b\x01v\x00\x01c\x01v")
+        diff_fixture("after.rdb", b"\x00\x01a\x02vv\x02\x01b\x01\x01v\x00\x01d\x01v")
+        args = ["diff", "before.rdb", "after.rdb"]
+        report = run(args, 0, cwd=work)
+        assert "added: 1\nremoved: 1\ntype_changed: 1\nsize_changed: 2" in report
+        assert "key_base64=Yg== before_type=String after_type=Set" in report
+        assert report == run(args, 0, cwd=work)
+        assert "returned: 1" in run([*args, "--limit", "1"], 0, cwd=work)
+        assert "returned: 0" in run([*args, "--db", "2"], 0, cwd=work)
+        assert "delta_bytes=1" in run([*args, "--prefix", "a"], 0, cwd=work)
+        assert "returned: 0" in run(["diff", "before.rdb", "before.rdb"], 0, cwd=work)
+        run(["diff", "before.rdb"], 2, cwd=work)
+        run([*args, "--limit", "0"], 2, cwd=work)
+        diff_fixture("duplicate.rdb", b"\x00\x01a\x01v\x00\x01a\x01v")
+        run(["diff", "before.rdb", "duplicate.rdb"], 1, cwd=work)
+        (work / "broken.rdb").write_bytes(b"REDIS0011")
+        run(["diff", "before.rdb", "broken.rdb"], 1, cwd=work)
+
         cases = [
             ("empty.rdb", b"", "UnexpectedEnd"),
             ("truncated.rdb", valid[:-1], "UnexpectedEnd"),

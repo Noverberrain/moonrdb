@@ -46,6 +46,16 @@ pub async fn run(args : ArrayView[String]) -> Int32 {
       @stdio.stdout.text.write(usage())
       0
     }
+    Diff(before~, after~, max_input_bytes~, db~, prefix~, limit~) => {
+      let report = diff_files(before, after, max_input_bytes, db, prefix, limit) catch {
+        error => {
+          @stdio.stderr.text.write("moonrdb: diff failed: \{repr(error)}\n")
+          return 1
+        }
+      }
+      @stdio.stdout.text.write(report)
+      0
+    }
     Inspect(path~, max_input_bytes~)
     | Stats(path~, max_input_bytes~, ..)
     | Top(path~, max_input_bytes~, ..)

@@ -61,6 +61,10 @@ moon run cmd/main --target native -- export fixtures/redis-7.2.5-sorted-sets/sor
 
 不指定 output 时 stdout 只含 JSONL；完成状态写 stderr。二进制统一 Base64，宽整数写字符串，Sorted Set 保留 IEEE 分数位模式。文件先写同目录临时文件，完整成功后替换目标。详见 [导出约定](docs/export.md)。另有 39 项导出进程检查验证还原和文件失败保护。
 
+## 双快照对比
+
+使用 `diff <before.rdb> <after.rdb>` 查看新增、删除、类型和体积变化。参数与比较口径见 [diff 文档](docs/diff.md)。
+
 ## 库调用示例
 
 消费项目的 `moon.pkg` 导入 `"Noverberrain/moonrdb"` 后，可以调用：
