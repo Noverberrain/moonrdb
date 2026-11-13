@@ -50,6 +50,17 @@ fn top_meta(
         r.members.length(),
         "members",
       )
+    Stream(r) =>
+      (
+        r.database,
+        r.key,
+        r.serialized_bytes,
+        r.record_start,
+        "Stream",
+        "Listpacks3",
+        r.length.to_int(),
+        "entries",
+      )
     SortedSet(r) =>
       (
         r.database,

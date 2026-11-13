@@ -38,6 +38,7 @@ pub(all) suberror ParseError {
   InvalidHash(offset~ : Int32, reason~ : String)
   InvalidListpack(offset~ : Int32, inner_offset~ : Int32, reason~ : String)
   InvalidList(offset~ : Int32, reason~ : String)
+  InvalidStream(offset~ : Int32, reason~ : String)
   InvalidSortedSet(offset~ : Int32, reason~ : String)
   InvalidSet(offset~ : Int32, reason~ : String)
   InvalidIntset(offset~ : Int32, inner_offset~ : Int32, reason~ : String)
@@ -159,6 +160,7 @@ pub(all) enum RdbRecord {
   List(ListRecord)
   Set(SetRecord)
   SortedSet(SortedSetRecord)
+  Stream(StreamRecord)
 } derive(Eq, @debug.Debug)
 pub fn RdbRecord::equal(Self, Self) -> Bool
 pub fn RdbRecord::not_equal(Self, Self) -> Bool
@@ -197,6 +199,7 @@ pub(all) struct Snapshot {
   database_selections : Array[UInt64]
   resize_hints : Array[DatabaseSizeHint]
   records : Array[RdbRecord]
+  function_libraries : Array[Bytes]
   checksum : ChecksumStatus
   file_size : Int32
   global_overhead_bytes : UInt64
@@ -238,6 +241,34 @@ pub(all) enum SortedSetStorage {
 pub fn SortedSetStorage::equal(Self, Self) -> Bool
 pub fn SortedSetStorage::not_equal(Self, Self) -> Bool
 pub fn SortedSetStorage::to_repr(Self) -> @debug.Repr
+
+pub(all) struct StreamEntry {
+  milliseconds : UInt64
+  sequence : UInt64
+  fields : Array[HashEntry]
+} derive(Eq, @debug.Debug)
+pub fn StreamEntry::equal(Self, Self) -> Bool
+pub fn StreamEntry::not_equal(Self, Self) -> Bool
+pub fn StreamEntry::to_repr(Self) -> @debug.Repr
+
+pub(all) struct StreamRecord {
+  database : UInt64
+  key : Bytes
+  key_storage : StringStorage
+  entries : Array[StreamEntry]
+  length : UInt64
+  group_count : UInt64
+  payload : Bytes
+  expires_at_ms : Int64?
+  idle_seconds : UInt64?
+  frequency : Byte?
+  record_start : Int32
+  record_end : Int32
+  serialized_bytes : UInt64
+} derive(Eq, @debug.Debug)
+pub fn StreamRecord::equal(Self, Self) -> Bool
+pub fn StreamRecord::not_equal(Self, Self) -> Bool
+pub fn StreamRecord::to_repr(Self) -> @debug.Repr
 
 pub(all) struct StringRecord {
   database : UInt64

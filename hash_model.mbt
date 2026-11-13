@@ -56,6 +56,7 @@ pub(all) enum RdbRecord {
   List(ListRecord)
   Set(SetRecord)
   SortedSet(SortedSetRecord)
+  Stream(StreamRecord)
 } derive(Debug, Eq)
 
 ///|
@@ -72,6 +73,7 @@ pub(all) struct Snapshot {
   database_selections : Array[UInt64]
   resize_hints : Array[DatabaseSizeHint]
   records : Array[RdbRecord]
+  function_libraries : Array[Bytes]
   checksum : ChecksumStatus
   file_size : Int32
   global_overhead_bytes : UInt64

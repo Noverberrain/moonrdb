@@ -50,6 +50,14 @@ fn record_json(record : @moonrdb.RdbRecord) -> Json {
         r.record_end,
         r.key_storage,
       )
+    Stream(r) =>
+      (
+        r.expires_at_ms,
+        r.idle_seconds,
+        r.frequency,
+        r.record_end,
+        r.key_storage,
+      )
     SortedSet(r) =>
       (
         r.expires_at_ms,
@@ -112,6 +120,23 @@ fn record_json(record : @moonrdb.RdbRecord) -> Json {
         Some(v) => Json::string(repr(v))
         None => Json::null()
       }
+    }
+    Stream(r) => {
+      fields["length"] = Json::string(r.length.to_string())
+      fields["group_count"] = Json::string(r.group_count.to_string())
+      fields["entries"] = Json::array(
+        r.entries.map(e => {
+          "milliseconds": Json::string(e.milliseconds.to_string()),
+          "sequence": Json::string(e.sequence.to_string()),
+          "fields": Json::array(
+            e.fields.map(pair => {
+              "field": binary_json(pair.field),
+              "value": binary_json(pair.value),
+            }),
+          ),
+        }),
+      )
+      fields["rdb_payload"] = binary_json(r.payload)
     }
     SortedSet(r) => {
       fields["entries"] = Json::array(

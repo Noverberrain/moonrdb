@@ -1,0 +1,53 @@
+[
+  {
+    "database": 0,
+    "key_base64": "c3RyZWFt",
+    "type": "stream",
+    "expires_at_ms": null,
+    "length": 3,
+    "groups": 1,
+    "entries": [
+      [
+        "100-0",
+        [
+          "Zg==",
+          "AP8=",
+          "Zg==",
+          "ZHVwbGljYXRl"
+        ]
+      ],
+      [
+        "100-1",
+        [
+          "Zg==",
+          "c2Vjb25k",
+          "Zg==",
+          "dmFsdWU="
+        ]
+      ],
+      [
+        "102-0",
+        [
+          "b3RoZXI=",
+          "dGFpbA=="
+        ]
+      ]
+    ]
+  },
+  {
+    "database": 0,
+    "key_base64": "ZW1wdHktc3RyZWFt",
+    "type": "stream",
+    "expires_at_ms": null,
+    "length": 0,
+    "groups": 1,
+    "entries": []
+  },
+  {
+    "database": 2,
+    "key_base64": "Zm9sbG93aW5n",
+    "type": "string",
+    "expires_at_ms": null,
+    "value_base64": "c3RpbGwgcmVhZGFibGU="
+  }
+]

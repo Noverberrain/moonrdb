@@ -264,7 +264,7 @@ test "Set shares decoded bytes with other types and leaves historical encodings 
     set_error(input, max_decoded_bytes=2)
     is ResourceLimitExceeded(resource="decoded-bytes", actual=3UL, ..),
   )
-  for code in [3, 12, 21] {
+  for code in [3, 12, 7] {
     assert_true(
       set_error(empty_file(([code.to_byte()] : Bytes)))
       is UnsupportedObjectType(..),
@@ -344,6 +344,7 @@ async test "real Set fixture covers three encodings widths and unordered semanti
   let mut markers = 0
   for record in result.records {
     let (start, end, size) = match record {
+      Stream(_) => fail("unexpected Stream")
       SortedSet(_) => fail("unexpected Sorted Set")
       Set(value) =>
         (value.record_start, value.record_end, value.serialized_bytes)

@@ -23,6 +23,9 @@ def command(port, password, *args, database=0, binary=False):
             sock.sendall(b"*%d\r\n" % len(parts) + b"".join(
                 b"$%d\r\n" % len(part) + part + b"\r\n" for part in parts
             ))
+            return read_reply()
+
+        def read_reply():
             line = stream.readline()
             if line.startswith(b"-"):
                 raise RuntimeError(line.decode().strip())
@@ -38,6 +41,8 @@ def command(port, password, *args, database=0, binary=False):
                 if stream.read(2) != b"\r\n":
                     raise RuntimeError("Incomplete bulk reply")
                 return data if binary else data.decode()
+            if line.startswith(b"*"):
+                return [read_reply() for _ in range(int(line[1:-2]))]
             raise RuntimeError("Unexpected Redis reply")
 
         if request(["AUTH", password]) != "OK":
@@ -66,7 +71,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--redis-bin", required=True, type=Path)
     parser.add_argument("--checksum", choices=["enabled", "disabled"], default="enabled")
-    parser.add_argument("--dataset", choices=["empty", "strings", "hashes", "lists", "sets", "sorted-sets"], default="empty")
+    parser.add_argument("--dataset", choices=["empty", "strings", "hashes", "lists", "sets", "sorted-sets", "streams"], default="empty")
     parser.add_argument("--policy", choices=["noeviction", "allkeys-lru", "allkeys-lfu"], default="noeviction")
     parser.add_argument("--output-dir", required=True, type=Path,
                         help="Must not exist; use .work/empty-regenerated for a new run")
@@ -97,6 +102,8 @@ def main():
         import set_dataset as dataset
     elif args.dataset == "sorted-sets":
         import sorted_set_dataset as dataset
+    elif args.dataset == "streams":
+        import stream_dataset as dataset
     sorted_set_config = "zset-max-listpack-entries 4\nzset-max-listpack-value 64\n" if args.dataset == "sorted-sets" else ""
     hash_config = "hash-max-listpack-entries 4\nhash-max-listpack-value 64\n" if args.dataset == "hashes" else ""
     list_config = "list-max-listpack-size 2\nlist-compress-depth 1\nenable-debug-command local\n" if args.dataset == "lists" else ""

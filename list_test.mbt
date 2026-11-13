@@ -385,6 +385,7 @@ async test "real quicklist2 snapshot preserves ordered bytes and mixed node enco
   let mut markers = 0
   for record in result.records {
     let (start, end, size) = match record {
+      Stream(_) => fail("unexpected Stream")
       SortedSet(_) => fail("unexpected Sorted Set")
       Set(_) => fail("unexpected Set in List fixture")
       List(value) =>

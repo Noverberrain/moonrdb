@@ -1,6 +1,6 @@
 # 兼容矩阵（F11）
 
-通用 `parse` 支持文件结构、String、Hash、quicklist2 List、Set 与 Sorted Set。`parse_strings` 仍只接受 String；原 `parse_empty` 保留 F2 边界：拒绝对象及 AUX LZF。Stream、Module 等仍不支持。
+通用 `parse` 支持文件结构、String、Hash、quicklist2 List、Set、Sorted Set 与 Stream。`parse_strings` 仍只接受 String；原 `parse_empty` 保留 F2 边界：拒绝对象及 AUX LZF。本期兼容终点为 Redis 7.2.5 原生保存的 RDB 11 无模块快照，在配置的输入和解码预算内完成整库读取。
 
 ## 固定的格式依据
 
@@ -26,7 +26,7 @@
 | Set | 20 | SET_LISTPACK | F6 | 已实现 / 真实二进制、空成员、整数及 LZF 容器样本通过 |
 | Sorted Set | 5 | ZSET_2，二进制 double 分值 | F7 | 已实现 / 真实二进制成员、分数边界、LZF 与元信息样本通过 |
 | Sorted Set | 17 | ZSET_LISTPACK | F7 | 已实现 / 真实二进制成员、分数边界、LZF 与元信息样本通过 |
-| Stream | 21 | STREAM_LISTPACKS_3，此版本的保存分支 | 首版范围外 | 未实现 / 无 |
+| Stream | 21 | STREAM_LISTPACKS_3 | 本期支持 | 已验证多节点、删除项、空流、消费组和 PEL |
 | Module | 7 | MODULE_2，此版本的保存分支 | 首版范围外 | 未实现 / 无 |
 | 历史表示 | 1、3、6、9、10、12、13、14、15、19 | 上游加载器仍有分支：LIST、ZSET、MODULE_PRE_GA、ZIPMAP、ZIPLIST、QUICKLIST、旧 STREAM | 首版不承诺 | 未实现 / 无 |
 
@@ -50,7 +50,8 @@ F7 支持二进制 double 与 listpack Sorted Set，核对配对、成员唯一�
 | EXPIRETIME / EXPIRETIME_MS | 253 / 252 | F2/F3 | 毫秒时间有真实 String 样本；旧秒编码仅有小端合成测试 |
 | IDLE / FREQ | 248 / 249 | F2/F3/F4 | IDLE 有真实 String 样本；FREQ 有真实 Hash 样本 |
 | EOF 与 CRC64 | 255 + 8 字节校验和 | F2—F7 | 七份真实快照通过；有效与关闭状态可区分，损坏／截断被拒绝 |
-| FUNCTION2 / FUNCTION_PRE_GA / MODULE_AUX | 245 / 246 / 247 | 首版范围外 | 未实现；暂无样本 |
+| FUNCTION2 | 245 | 本期支持 | 保留函数库原始字节 |
+| FUNCTION_PRE_GA / MODULE_AUX | 246 / 247 | 范围外 | 明确报错 |
 
 样本来源、SHA256 和复现方式见 [fixtures/README.md](../fixtures/README.md)。Python 离线验证核对样本身份和预期数据；MoonBit 测试解析两份空库与五份有键快照，检查语义、实际编码及校验状态。
 
@@ -61,3 +62,11 @@ F0 在 Windows x64、`moonc 0.10.18+6c83a7f62`、`moon 0.1.20261028` 下验证 n
 ## inspect CLI
 
 F8 已实现 Windows native `inspect`，使用同一解析 API 检查整个文件并显示版本、数据库、键数和校验状态；参数和退出行为见 [inspect.md](inspect.md)。stats 已实现，含前缀汇总和指定时刻的 TTL 分布，见 [stats.md](stats.md)；top 已实现，见 [top.md](top.md)；export 已实现，见 [export.md](export.md)。解析库根包 API 保持 F7 不变，新增系统依赖仅位于 CLI 包。
+
+### Stream 与函数库
+
+Stream 解码消息 ID 和有序字段对，保留重复字段及二进制值。删除项用于结构核对，导出的消息列表包含现存消息。解析器读取消费组、消费者和全局／本地待确认列表（PEL），检查 ID 引用。组数和原始 Stream 负载随记录保留，JSONL 将原始负载编码为 Base64。inspect、stats、top、diff 均可分析整库，Stream 的内容对比基于现存消息。
+
+FUNCTION2 按带长度的 RDB 字符串读取，保存在 Snapshot.function_libraries。inspect 报告库数，函数库字节计入全局开销。键级 JSONL 仅导出键记录，Lua 源码在库接口中按字节保留。模块对象、模块辅助段、旧式 Stream 编码及未知标记明确报错。 [Redis 7.2.5 RDB 源码](https://github.com/redis/redis/blob/7.2.5/src/rdb.c)
+
+真实样本经 Redis 7.2.5 SAVE、redis-check-rdb 校验和第二个实例重载，核对 XRANGE、XPENDING、消费者、函数库和后续 DB 2 普通键。 [Stream 样本](../fixtures/redis-7.2.5-streams/)

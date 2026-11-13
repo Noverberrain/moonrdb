@@ -31,6 +31,7 @@ def verify(folder, checksum_enabled):
 
 def main():
     root = Path(__file__).resolve().parents[1] / "fixtures"
+    verify(root / "redis-7.2.5-streams", True)
     verify(root / "redis-7.2.5", True)
     verify(root / "redis-7.2.5-no-checksum", False)
     verify(root / "redis-7.2.5-strings", True)

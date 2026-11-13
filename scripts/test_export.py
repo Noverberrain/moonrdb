@@ -60,6 +60,14 @@ def main():
                 assert list(map(binary, r["items"])) == list(map(b64, e["items_base64"]))
             elif e["type"] == "set":
                 assert set(map(binary, r["members"])) == set(map(b64, e["members_base64"]))
+            elif e["type"] == "stream":
+                assert int(r["length"]) == e["length"]
+                assert int(r["group_count"]) == e["groups"]
+                actual = [[x["milliseconds"] + "-" + x["sequence"],
+                           [pair[name]["data"] for pair in x["fields"] for name in ("field", "value")]]
+                          for x in r["entries"]]
+                assert actual == e["entries"]
+                assert binary(r["rdb_payload"])
             else:
                 actual = {binary(x["element"]): struct.unpack("<d", struct.pack("<Q", int(x["score_bits_u64"])))[0] for x in r["entries"]}
                 assert actual == {b64(x["element_base64"]): float(x["score"]) for x in e["entries"]}
@@ -78,7 +86,7 @@ def main():
         assert not list(work.glob("*.tmp"))
         run([source, "--prefix", "missing", "--output", target])
         assert target.read_bytes() == b""
-        for data in [b"", b"REDIS0012", source.read_bytes()[:-1], b"REDIS0011\x15", source.read_bytes() + b"x"]:
+        for data in [b"", b"REDIS0012", source.read_bytes()[:-1], b"REDIS0011\x07", source.read_bytes() + b"x"]:
             bad = work / "bad.rdb"
             bad.write_bytes(data)
             target.write_bytes(b"keep")

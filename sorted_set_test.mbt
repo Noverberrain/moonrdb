@@ -327,6 +327,7 @@ async test "real Sorted Set fixture semantics encodings metadata and accounting"
   let mut previous_end = 9
   for record in result.records {
     let (start, end, size) = match record {
+      Stream(_) => fail("unexpected Stream")
       SortedSet(r) => (r.record_start, r.record_end, r.serialized_bytes)
       Set(r) => {
         assert_eq(r.members, [b"value"])
@@ -587,7 +588,7 @@ test "Sorted Set preserves narrow parsers and rejects encoded cardinality" {
   assert_true(
     zset_error(empty_file(b"\x05\x00\xc0")) is UnexpectedEncodedLength(..),
   )
-  for code in [3, 12, 21] {
+  for code in [3, 12, 7] {
     assert_true(
       zset_error(empty_file(([code.to_byte()] : Bytes)))
       is UnsupportedObjectType(..),

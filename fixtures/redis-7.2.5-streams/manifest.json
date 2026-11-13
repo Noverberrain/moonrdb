@@ -1,0 +1,16 @@
+{
+  "redis_version": "7.2.5",
+  "upstream_commit": "f60370ce28b946c1146dcea77c9c399d39601aaa",
+  "generator_version": "Redis server v=7.2.5 sha=00000000:0 malloc=libc bits=64 build=2c0c57178146e13d",
+  "server_binary_sha256": "af5e06494b39b496dd30f22cf27201b27f65468614f0b61b3abe0d1fa0615f9b",
+  "rdb_format_version": 11,
+  "file": "streams.rdb",
+  "size_bytes": 627,
+  "sha256": "fcf8db04444fbd0697c00bdacacb481ba0b97681f1211b22d93c5eebc7b44924",
+  "expected_keys": 3,
+  "databases_configured": 16,
+  "checksum_enabled": true,
+  "generation": "Fresh isolated instance; INFO keyspace empty; SAVE; redis-check-rdb; reload in second process; values and PEXPIRETIME verified for every key",
+  "policy": "noeviction",
+  "expected_sha256": "0a19e7a060051280d23d20be927bf9ff7de37f8698d8b38f42f397d2ef0efc76"
+}

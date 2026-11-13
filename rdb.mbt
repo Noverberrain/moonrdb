@@ -72,6 +72,11 @@ pub fn parse_strings(
   let records = result.records.map(record => {
     match record {
       String(value) => value
+      Stream(value) =>
+        raise UnsupportedObjectType(
+          offset=value.record_start,
+          object_type=b'\x15',
+        )
       SortedSet(value) =>
         raise UnsupportedObjectType(
           offset=value.record_start,
@@ -156,6 +161,7 @@ fn parse_snapshot(
   let database_selections = []
   let resize_hints = []
   let records = []
+  let function_libraries = []
   let budget : DecodeBudget = { limit: max_decoded_bytes, used: 0, }
   let lists : ListBudget = {
     max_nodes: max_list_nodes,
@@ -196,12 +202,13 @@ fn parse_snapshot(
           database_selections,
           resize_hints,
           records,
+          function_libraries,
           checksum,
           file_size: input.length(),
           global_overhead_bytes: input.length().to_uint64() - record_bytes,
         }
       }
-      250 | 254 | 251 => {
+      245 | 250 | 254 | 251 => {
         // Limit before allocating or appending to any retained metadata array.
         check_resource_limit(
           "metadata-entries",
@@ -211,6 +218,19 @@ fn parse_snapshot(
         )
         entries += 1
         match opcode.to_int() {
+          245 => {
+            if !allow_sorted_sets {
+              raise UnsupportedOpcode(offset~, opcode~)
+            }
+            function_libraries.push(
+              reader.read_string(
+                max_string_bytes,
+                budget,
+                allow_lzf=true,
+                resource="function-library-bytes",
+              ).value,
+            )
+          }
           250 => {
             let key = reader.read_aux_string(
               max_string_bytes,
@@ -386,7 +406,7 @@ fn supported_type(
   (hashes && (value == b'\x04' || value == b'\x10')) ||
   (lists && value == b'\x12') ||
   (sets && (value == b'\x02' || value == b'\x0b' || value == b'\x14')) ||
-  (sorted_sets && (value == b'\x05' || value == b'\x11'))
+  (sorted_sets && (value == b'\x05' || value == b'\x11' || value == b'\x15'))
 }
 
 ///|
@@ -397,6 +417,7 @@ fn record_size(record : RdbRecord) -> UInt64 {
     List(value) => value.serialized_bytes
     Set(value) => value.serialized_bytes
     SortedSet(value) => value.serialized_bytes
+    Stream(value) => value.serialized_bytes
   }
 }
 
@@ -427,6 +448,12 @@ fn Reader::read_record(
     SortedSet(
       self.read_sorted_set_record(
         prefix, database, max_string_bytes, max_packed_bytes, budget, sorted_sets,
+      ),
+    )
+  } else if prefix.object_type == b'\x15' {
+    Stream(
+      self.read_stream_record(
+        prefix, database, max_string_bytes, max_packed_bytes, budget,
       ),
     )
   } else if prefix.object_type == b'\x12' {

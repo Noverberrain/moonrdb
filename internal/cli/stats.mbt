@@ -21,6 +21,8 @@ pub fn stats_report(
       List(r) =>
         (r.database, "List", r.serialized_bytes, r.expires_at_ms, r.key)
       Set(r) => (r.database, "Set", r.serialized_bytes, r.expires_at_ms, r.key)
+      Stream(r) =>
+        (r.database, "Stream", r.serialized_bytes, r.expires_at_ms, r.key)
       SortedSet(r) =>
         (r.database, "SortedSet", r.serialized_bytes, r.expires_at_ms, r.key)
     }

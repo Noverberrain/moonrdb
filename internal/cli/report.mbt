@@ -8,6 +8,7 @@ fn record_database(record : @moonrdb.RdbRecord) -> UInt64 {
     Hash(r) => r.database
     List(r) => r.database
     Set(r) => r.database
+    Stream(r) => r.database
     SortedSet(r) => r.database
   }
 }
@@ -27,6 +28,9 @@ pub fn inspect_report(snapshot : @moonrdb.Snapshot) -> String {
   let databases = counts.keys().collect()
   databases.sort()
   let out = StringBuilder()
+  out.write_string(
+    "function_libraries: \{snapshot.function_libraries.length()}\n",
+  )
   out.write_string("MoonRDB inspect\n")
   out.write_string("format_version: \{snapshot.format_version}\n")
   out.write_string("file_bytes: \{snapshot.file_size}\n")

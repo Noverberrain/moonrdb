@@ -73,6 +73,13 @@ def main():
         run(["top", "f", *bad], 2, stderr_contains="invalid arguments")
     run(["top", "--help"], 0, stdout_contains="moonrdb top")
 
+    stream_file = root / "fixtures/redis-7.2.5-streams/streams.rdb"
+    report = run(["inspect", stream_file], 0, stdout_contains="function_libraries: 1")
+    assert "keys: 3" in report and "checksum: valid" in report
+    run(["stats", stream_file], 0, stdout_contains="db 0 type Stream: keys=2")
+    run(["top", stream_file], 0, stdout_contains="type=Stream encoding=Listpacks3 entries=3")
+    run(["diff", stream_file, stream_file], 0, stdout_contains="returned: 0")
+
     stats_file = root / "fixtures/redis-7.2.5-sorted-sets/sorted-sets.rdb"
     baseline = run(["stats", stats_file], 0, stdout_contains="expiry_evaluation: not_requested")
     for at, expected in [("2100-01-01T00:00:00.122Z", "ttl_le_1h: 1"),
@@ -124,13 +131,30 @@ def main():
         (work / "broken.rdb").write_bytes(b"REDIS0011")
         run(["diff", "before.rdb", "broken.rdb"], 1, cwd=work)
 
+        diff_fixture("semantic-before.rdb",
+                     b"\x00\x01a\x01x\xfc" + (100).to_bytes(8, "little") +
+                     b"\x00\x01b\x01x\x02\x01s\x02\x01a\x01b")
+        diff_fixture("semantic-after.rdb",
+                     b"\x00\x01a\x01y\xfc" + (200).to_bytes(8, "little") +
+                     b"\x00\x01b\x01x\x02\x01s\x02\x01b\x01a")
+        report = run(["diff", "semantic-before.rdb", "semantic-after.rdb"], 0, cwd=work)
+        assert "size_changed: 0\ncontent_changed: 1\nexpiry_changed: 1\nreturned: 2" in report
+        assert "delta_bytes=0 content_changed=true expiry_changed=false" in report
+        assert "delta_bytes=0 content_changed=false expiry_changed=true" in report
+
+        assert "before_expiry_ms=100 after_expiry_ms=200" in report
+        report = run(["diff", "before.rdb", "semantic-before.rdb"], 0, cwd=work)
+        assert "before_expiry_ms=persistent after_expiry_ms=100" in report
+        report = run(["diff", "semantic-before.rdb", "before.rdb"], 0, cwd=work)
+        assert "before_expiry_ms=100 after_expiry_ms=persistent" in report
+
         cases = [
             ("empty.rdb", b"", "UnexpectedEnd"),
             ("truncated.rdb", valid[:-1], "UnexpectedEnd"),
             ("bad-magic.rdb", b"BADIS" + valid[5:], "InvalidMagic"),
             ("version.rdb", b"REDIS0012" + valid[9:], "UnsupportedVersion"),
-            ("unsupported.rdb", b"REDIS0011\x15", "UnsupportedObjectType"),
-            ("unknown-op.rdb", b"REDIS0011\xf5", "UnsupportedOpcode"),
+            ("unsupported.rdb", b"REDIS0011\x07", "UnsupportedObjectType"),
+            ("unknown-op.rdb", b"REDIS0011\xf6", "UnsupportedOpcode"),
             ("checksum.rdb", valid[:-1] + bytes([valid[-1] ^ 1]), "ChecksumMismatch"),
             ("trailing.rdb", valid + b"x", "TrailingData"),
         ]
