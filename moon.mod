@@ -1,6 +1,6 @@
 name = "Noverberrain/moonrdb"
 
-version = "0.1.0"
+version = "0.2.0"
 
 readme = "README.md"
 
@@ -12,4 +12,4 @@ keywords = [ "redis", "rdb" ]
 
 preferred_target = "native"
 
-description = "A native MoonBit Redis RDB parser and offline snapshot analysis CLI (under development)."
+description = "A native MoonBit Redis RDB parser and offline snapshot analysis CLI."
