@@ -148,6 +148,24 @@ def main():
         report = run(["diff", "semantic-before.rdb", "before.rdb"], 0, cwd=work)
         assert "before_expiry_ms=100 after_expiry_ms=persistent" in report
 
+        # Two SAMEFIELDS messages in one uncompressed node. The second ID
+        # must be greater than the first, even when the file checksum is off.
+        def stream_with_sequence(name, second_sequence):
+            values = [2, 0, 1, 10, 0, 2, 0, 0, 20, 4,
+                      2, 0, second_sequence, 21, 4]
+            entries = bytes(byte for value in values for byte in (value, 1))
+            packed = (len(entries) + 7).to_bytes(4, "little")
+            packed += len(values).to_bytes(2, "little") + entries + b"\xff"
+            node_id = (100).to_bytes(8, "big") + bytes(8)
+            body = b"\x15\x01s\x01\x10" + node_id + bytes([len(packed)]) + packed
+            diff_fixture(name, body + bytes([2, 0x40, 100, 1, 0x40, 100, 0, 0, 0, 2, 0]))
+
+        stream_with_sequence("ordered-stream.rdb", 1)
+        run(["inspect", "ordered-stream.rdb"], 0, stdout_contains="keys: 1", cwd=work)
+        stream_with_sequence("duplicate-id.rdb", 0)
+        run(["inspect", "duplicate-id.rdb"], 1,
+            stderr_contains="stream message IDs must increase", cwd=work)
+
         cases = [
             ("empty.rdb", b"", "UnexpectedEnd"),
             ("truncated.rdb", valid[:-1], "UnexpectedEnd"),

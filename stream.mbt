@@ -251,6 +251,15 @@ fn read_stream_node(
     }
     elements += width + 1
     if (flags & 1L) == 0L {
+      if entries.last() is Some(previous) {
+        if ms < previous.milliseconds ||
+          (ms == previous.milliseconds && seq <= previous.sequence) {
+          raise InvalidStream(
+            offset~,
+            reason="stream message IDs must increase",
+          )
+        }
+      }
       actual_live += 1
       entries.push({ milliseconds: ms, sequence: seq, fields, })
     }
