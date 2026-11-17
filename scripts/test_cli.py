@@ -2,6 +2,7 @@
 
 import argparse
 import base64
+import json
 from pathlib import Path
 import subprocess
 import tempfile
@@ -165,6 +166,22 @@ def main():
         stream_with_sequence("duplicate-id.rdb", 0)
         run(["inspect", "duplicate-id.rdb"], 1,
             stderr_contains="stream message IDs must increase", cwd=work)
+
+        report = run([*args, "--format", "jsonl", "--limit", "1", "--group-by-db",
+                      "--group-prefix", "a", "--group-prefix", "missing"], 0, cwd=work)
+        summary, database, prefix, empty_prefix, change, complete = [
+            json.loads(line) for line in report.splitlines()
+        ]
+        assert summary["schema"] == "moonrdb.diff.v1"
+        assert summary["total_changes"] == 4 and summary["returned"] == 1
+        assert (database["group_by"], database["group"], database["changes"]) == ("database", "0", 4)
+        assert database["delta_bytes"] == "2"
+        assert (prefix["group"], prefix["changes"], prefix["delta_bytes"]) == ("a", 1, "1")
+        assert empty_prefix["changes"] == 0 and empty_prefix["delta_bytes"] == "0"
+        assert change["before_type"] is None and change["after_type"] == "String"
+        assert complete == {"kind": "complete"}
+        run([*args, "--group-prefix", "a", "--group-prefix", "a"], 2, cwd=work)
+        run(["diff", "before.rdb", "broken.rdb", "--format", "jsonl"], 1, cwd=work)
 
         cases = [
             ("empty.rdb", b"", "UnexpectedEnd"),

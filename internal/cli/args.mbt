@@ -10,7 +10,10 @@ pub(all) enum Command {
     max_input_bytes~ : Int32,
     db~ : UInt64?,
     prefix~ : String?,
-    limit~ : Int32
+    limit~ : Int32,
+    jsonl~ : Bool,
+    group_by_db~ : Bool,
+    group_prefixes~ : Array[String]
   )
   Export(
     path~ : String,
@@ -51,7 +54,8 @@ pub fn usage() -> String {
     #|       stats options: [--at YYYY-MM-DDTHH:MM:SS[.sss]Z] [--prefix <UTF-8 text>]...
     #|       moonrdb top <file.rdb> [--by serialized-bytes] [--limit <1..10000>]
     #|       moonrdb export <file.rdb> [--db <id>] [--prefix <UTF-8 text>] [--format jsonl] [--output <file>]
-    #|       moonrdb diff <before.rdb> <after.rdb> [--db <id>] [--prefix <text>] [--limit <1..10000>]
+    #|       moonrdb diff <before.rdb> <after.rdb> [--db <id>] [--prefix <text>] [--limit <1..10000>] [--format jsonl]
+    #|         [--group-by-db] [--group-prefix <text>]...
     #|       moonrdb --help
     #|
     #|Inspect a complete format-11 RDB snapshot (Redis 7.2.5 supported encodings).
@@ -118,6 +122,8 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
       let mut db : UInt64? = None
       let mut output : String? = None
       let mut has_format = false
+      let mut group_by_db = false
+      let group_prefixes : Array[String] = []
       let mut at_ms : Int64? = None
       let prefixes : Array[String] = []
       let mut options = true
@@ -181,8 +187,21 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
             output = Some(value)
             continue tail
           }
+          ["--group-by-db", .. tail] if options &&
+            name == "diff" &&
+            !group_by_db => {
+            group_by_db = true
+            continue tail
+          }
+          ["--group-prefix", value, .. tail] if options && name == "diff" => {
+            if group_prefixes.contains(value) || group_prefixes.length() >= 64 {
+              raise InvalidArguments
+            }
+            group_prefixes.push(value)
+            continue tail
+          }
           ["--format", "jsonl", .. tail] if options &&
-            name == "export" &&
+            (name == "export" || name == "diff") &&
             !has_format => {
             has_format = true
             continue tail
@@ -212,6 +231,9 @@ pub fn parse_args(args : ArrayView[String]) -> Command raise UsageError {
           db~,
           prefix=prefixes.get(0),
           limit=top_limit,
+          jsonl=has_format,
+          group_by_db~,
+          group_prefixes~,
         )
       } else if name == "export" {
         Export(

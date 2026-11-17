@@ -28,6 +28,9 @@ fn diff_report(
   db : UInt64?,
   prefix : String?,
   limit : Int32,
+  jsonl : Bool,
+  group_by_db : Bool,
+  group_prefixes : Array[String],
 ) -> String raise {
   let encoded = prefix.map(p => @utf8.encode(p[:]))
   let old = diff_index(before, db, encoded)
@@ -45,6 +48,7 @@ fn diff_report(
       Bool,
       String,
       String,
+      Bytes,
     ),
   ] = []
   let mut added = 0
@@ -98,6 +102,7 @@ fn diff_report(
           expiry,
           diff_expiry(previous),
           diff_expiry(Some(current)),
+          key,
         ),
       )
     }
@@ -120,6 +125,7 @@ fn diff_report(
           false,
           diff_expiry(Some(previous)),
           "-",
+          key,
         ),
       )
     }
@@ -127,9 +133,70 @@ fn diff_report(
   changes.sort()
   let out = StringBuilder()
   let shown = Int32::min(limit, changes.length())
-  out.write_string(
-    "MoonRDB diff\nadded: \{added}\nremoved: \{removed}\ntype_changed: \{type_changed}\nsize_changed: \{size_changed}\ncontent_changed: \{content_changed}\nexpiry_changed: \{expiry_changed}\nreturned: \{shown}\n",
-  )
+  let before_checksum = if before.checksum is Valid(_) {
+    "valid"
+  } else {
+    "disabled"
+  }
+  let after_checksum = if after.checksum is Valid(_) {
+    "valid"
+  } else {
+    "disabled"
+  }
+  if jsonl {
+    append_diff_json(out, {
+      "schema": "moonrdb.diff.v1",
+      "kind": "summary",
+      "added": Json(added),
+      "removed": Json(removed),
+      "type_changed": Json(type_changed),
+      "size_changed": Json(size_changed),
+      "content_changed": Json(content_changed),
+      "expiry_changed": Json(expiry_changed),
+      "returned": Json(shown),
+      "total_changes": Json(changes.length()),
+      "before_checksum": Json::string(before_checksum),
+      "after_checksum": Json::string(after_checksum),
+    })
+  } else {
+    out.write_string(
+      "MoonRDB diff\nadded: \{added}\nremoved: \{removed}\ntype_changed: \{type_changed}\nsize_changed: \{size_changed}\ncontent_changed: \{content_changed}\nexpiry_changed: \{expiry_changed}\nreturned: \{shown}\n",
+    )
+  }
+  let db_totals : Map[UInt64, DiffTotals] = Map([])
+  let prefix_totals = group_prefixes.map(_ => DiffTotals::empty())
+  let encoded_groups = group_prefixes.map(value => @utf8.encode(value[:]))
+  if group_by_db || !group_prefixes.is_empty() {
+    for change in changes {
+      let (_, database, _, _, _, old_size, size, _, _, _, _, key) = change
+      if group_by_db {
+        let totals = db_totals
+          .get(database)
+          .unwrap_or_else(() => DiffTotals::empty())
+        totals.add(old_size, size)
+        db_totals[database] = totals
+      }
+      for i in 0..<encoded_groups.length() {
+        if bytes_prefix(key, encoded_groups[i]) {
+          prefix_totals[i].add(old_size, size)
+        }
+      }
+    }
+  }
+  let databases = db_totals.keys().collect()
+  databases.sort()
+  for database in databases {
+    diff_group_line(
+      out,
+      jsonl,
+      "database",
+      database.to_string(),
+      db_totals[database],
+    )
+  }
+  for i in 0..<group_prefixes.length() {
+    diff_group_line(out, jsonl, "prefix", group_prefixes[i], prefix_totals[i])
+  }
   for i in 0..<shown {
     let (
       negative_delta,
@@ -143,14 +210,36 @@ fn diff_report(
       expiry,
       before_expiry,
       after_expiry,
+      _,
     ) = changes[i]
+    if jsonl {
+      append_diff_json(out, {
+        "kind": "change",
+        "database": Json::string(database.to_string()),
+        "key_base64": Json::string(key),
+        "before_type": diff_optional_text(old_kind),
+        "after_type": diff_optional_text(kind),
+        "before_bytes": Json::string(old_size.to_string()),
+        "after_bytes": Json::string(size.to_string()),
+        "delta_bytes": Json::string((-negative_delta).to_string()),
+        "content_changed": Json::boolean(content),
+        "expiry_changed": Json::boolean(expiry),
+        "before_expiry_ms": diff_optional_text(before_expiry),
+        "after_expiry_ms": diff_optional_text(after_expiry),
+      })
+    } else {
+      out.write_string(
+        "db=\{database} key_base64=\{key} before_type=\{old_kind} after_type=\{kind} before_bytes=\{old_size} after_bytes=\{size} delta_bytes=\{-negative_delta} content_changed=\{content} expiry_changed=\{expiry} before_expiry_ms=\{before_expiry} after_expiry_ms=\{after_expiry}\n",
+      )
+    }
+  }
+  if jsonl {
+    append_diff_json(out, { "kind": "complete" })
+  } else {
     out.write_string(
-      "db=\{database} key_base64=\{key} before_type=\{old_kind} after_type=\{kind} before_bytes=\{old_size} after_bytes=\{size} delta_bytes=\{-negative_delta} content_changed=\{content} expiry_changed=\{expiry} before_expiry_ms=\{before_expiry} after_expiry_ms=\{after_expiry}\n",
+      "before_checksum: \{before_checksum}\nafter_checksum: \{after_checksum}\nstatus: complete\n",
     )
   }
-  out.write_string(
-    "before_checksum: \{if before.checksum is Valid(_) { "valid" } else { "disabled" }}\nafter_checksum: \{if after.checksum is Valid(_) { "valid" } else { "disabled" }}\nstatus: complete\n",
-  )
   out.to_string()
 }
 
@@ -162,13 +251,16 @@ async fn diff_files(
   db : UInt64?,
   prefix : String?,
   limit : Int32,
+  jsonl : Bool,
+  group_by_db : Bool,
+  group_prefixes : Array[String],
 ) -> String {
   let old = @moonrdb.parse(
     read_input(before, max_input_bytes),
     max_input_bytes~,
   )
   let new = @moonrdb.parse(read_input(after, max_input_bytes), max_input_bytes~)
-  diff_report(old, new, db, prefix, limit)
+  diff_report(old, new, db, prefix, limit, jsonl, group_by_db, group_prefixes)
 }
 
 ///|
@@ -235,5 +327,65 @@ fn diff_expiry(record : @moonrdb.RdbRecord?) -> String {
         None => "persistent"
         Some(ms) => ms.to_string()
       }
+  }
+}
+
+///|
+priv struct DiffTotals {
+  mut count : Int32
+  mut before : Int64
+  mut after : Int64
+}
+
+///|
+fn DiffTotals::empty() -> DiffTotals {
+  { count: 0, before: 0L, after: 0L, }
+}
+
+///|
+fn DiffTotals::add(self : DiffTotals, before : Int64, after : Int64) -> Unit {
+  self.count += 1
+  self.before += before
+  self.after += after
+}
+
+///|
+fn append_diff_json(out : StringBuilder, object : Json) -> Unit {
+  out.write_string(object.stringify())
+  out.write_string("\n")
+}
+
+///|
+fn diff_optional_text(value : String) -> Json {
+  if value == "-" {
+    Json::null()
+  } else {
+    Json::string(value)
+  }
+}
+
+///|
+fn diff_group_line(
+  out : StringBuilder,
+  jsonl : Bool,
+  field : String,
+  value : String,
+  totals : DiffTotals,
+) -> Unit {
+  let delta = totals.after - totals.before
+  if jsonl {
+    append_diff_json(out, {
+      "kind": "group",
+      "group_by": Json::string(field),
+      "group": Json::string(value),
+      "changes": Json(totals.count),
+      "before_bytes": Json::string(totals.before.to_string()),
+      "after_bytes": Json::string(totals.after.to_string()),
+      "delta_bytes": Json::string(delta.to_string()),
+    })
+  } else {
+    out.write_string(
+      "group_by=\{field} group=\{Json::string(value).stringify()} changes=\{totals.count} before_bytes=\{totals.before} after_bytes=\{totals.after} delta_bytes=\{delta}\n",
+    )
   }
 }

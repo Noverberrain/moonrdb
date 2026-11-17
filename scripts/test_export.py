@@ -67,6 +67,23 @@ def main():
                            [pair[name]["data"] for pair in x["fields"] for name in ("field", "value")]]
                           for x in r["entries"]]
                 assert actual == e["entries"]
+                assert len(r["groups"]) == e["groups"]
+                group, = r["groups"]
+                if e["length"]:
+                    assert binary(group["name"]) == b"group"
+                    assert group["pending_count"] == "3"
+                    assert group["last_delivered_id"] == {"milliseconds": "101", "sequence": "0"}
+                    by_name = {binary(consumer["name"]): consumer for consumer in group["consumers"]}
+                    assert by_name[b"bob"]["pending"] == []
+                    pending = by_name[b"alice"]["pending"]
+                    assert by_name[b"alice"]["pending_count"] == "3"
+                    assert {(entry["id"]["milliseconds"], entry["id"]["sequence"]) for entry in pending} == {
+                        ("100", "0"), ("100", "1"), ("101", "0"),
+                    }
+                    assert all(entry["delivery_count"] == "1" and int(entry["delivery_time_ms"]) > 0
+                               for entry in pending)
+                else:
+                    assert group["pending_count"] == "0" and group["consumers"] == []
                 assert binary(r["rdb_payload"])
             else:
                 actual = {binary(x["element"]): struct.unpack("<d", struct.pack("<Q", int(x["score_bits_u64"])))[0] for x in r["entries"]}

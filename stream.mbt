@@ -9,6 +9,7 @@ pub(all) struct StreamRecord {
   entries : Array[StreamEntry]
   length : UInt64
   group_count : UInt64
+  groups : Array[StreamGroup]
   payload : Bytes
   expires_at_ms : Int64?
   idle_seconds : UInt64?
@@ -23,6 +24,60 @@ pub extend StreamRecord with @debug.Debug::{to_repr}
 
 ///|
 pub extend StreamRecord with Eq::{equal, not_equal}
+
+///|
+pub(all) struct StreamMessageId {
+  milliseconds : UInt64
+  sequence : UInt64
+} derive(Debug, Eq)
+
+///|
+pub extend StreamMessageId with @debug.Debug::{to_repr}
+
+///|
+pub extend StreamMessageId with Eq::{equal, not_equal}
+
+///|
+pub(all) struct StreamPending {
+  id : StreamMessageId
+  delivery_time_ms : Int64
+  delivery_count : UInt64
+} derive(Debug, Eq)
+
+///|
+pub extend StreamPending with @debug.Debug::{to_repr}
+
+///|
+pub extend StreamPending with Eq::{equal, not_equal}
+
+///|
+pub(all) struct StreamConsumer {
+  name : Bytes
+  seen_time_ms : Int64
+  active_time_ms : Int64
+  pending : Array[StreamPending]
+} derive(Debug, Eq)
+
+///|
+pub extend StreamConsumer with @debug.Debug::{to_repr}
+
+///|
+pub extend StreamConsumer with Eq::{equal, not_equal}
+
+///|
+pub(all) struct StreamGroup {
+  name : Bytes
+  last_delivered_id : StreamMessageId
+  entries_read : Int64
+  consumers : Array[StreamConsumer]
+  pending_count : UInt64
+} derive(Debug, Eq)
+
+///|
+pub extend StreamGroup with @debug.Debug::{to_repr}
+
+///|
+pub extend StreamGroup with Eq::{equal, not_equal}
 
 ///|
 fn Reader::stream_string(
@@ -76,35 +131,39 @@ fn Reader::read_stream_record(
   }
   let group_count = self.read_count()
   self.require(group_count)
-  let groups : Map[Bytes, Unit] = Map([])
+  let groups = []
+  let group_names : Map[Bytes, Unit] = Map([])
   for _ in 0..<group_count.to_int() {
     let offset = self.pos
     let name = self.stream_string(max_string_bytes, budget)
-    if groups.contains(name) {
+    if group_names.contains(name) {
       raise InvalidStream(offset~, reason="duplicate group name")
     }
-    groups[name] = ()
+    group_names[name] = ()
 
-    for _ in 0..<3 {
-      ignore(self.read_count())
-    }
+    let milliseconds = self.read_count()
+    let sequence = self.read_count()
+    let last_delivered_id = { milliseconds, sequence, }
+    let entries_read = self.read_count().reinterpret_as_int64()
     let pending = self.read_count()
     self.require(pending)
-    let unassigned : Map[Bytes, Unit] = Map([])
+    let unassigned : Map[(UInt64, UInt64), StreamPending] = Map([])
     for _ in 0..<pending.to_int() {
       let offset = self.pos
-      let id = self.read_bytes(16UL).to_owned()
-      if unassigned.contains(id) {
+      let id = self.read_stream_id()
+      let identity = (id.milliseconds, id.sequence)
+      if unassigned.contains(identity) {
         raise InvalidStream(offset~, reason="duplicate group pending ID")
       }
-      unassigned[id] = ()
-      ignore(self.read_bytes(8UL))
-      ignore(self.read_count())
+      let delivery_time_ms = self.read_i64_le()
+      let delivery_count = self.read_count()
+      unassigned[identity] = { id, delivery_time_ms, delivery_count, }
     }
-    let consumers = self.read_count()
-    self.require(consumers)
+    let consumer_count = self.read_count()
+    self.require(consumer_count)
+    let consumers = []
     let names : Map[Bytes, Unit] = Map([])
-    for _ in 0..<consumers.to_int() {
+    for _ in 0..<consumer_count.to_int() {
       let offset = self.pos
       let name = self.stream_string(max_string_bytes, budget)
       if names.contains(name) {
@@ -112,24 +171,41 @@ fn Reader::read_stream_record(
       }
       names[name] = ()
 
-      ignore(self.read_bytes(16UL))
+      let seen_time_ms = self.read_i64_le()
+      let active_time_ms = self.read_i64_le()
       let owned = self.read_count()
       self.require(owned)
+      let consumer_pending = []
       for _ in 0..<owned.to_int() {
         let offset = self.pos
-        let id = self.read_bytes(16UL).to_owned()
-        if !unassigned.contains(id) {
+        let id = self.read_stream_id()
+        let identity = (id.milliseconds, id.sequence)
+        guard unassigned.get(identity) is Some(message) else {
           raise InvalidStream(
             offset~,
             reason="missing or already assigned group pending ID",
           )
         }
-        unassigned.remove(id)
+        consumer_pending.push(message)
+        unassigned.remove(identity)
       }
+      consumers.push({
+        name,
+        seen_time_ms,
+        active_time_ms,
+        pending: consumer_pending,
+      })
     }
     if !unassigned.is_empty() {
       raise InvalidStream(offset=self.pos, reason="unassigned group pending ID")
     }
+    groups.push({
+      name,
+      last_delivered_id,
+      entries_read,
+      consumers,
+      pending_count: pending,
+    })
   }
   budget.charge((self.pos - start).to_uint64(), start)
   {
@@ -139,6 +215,7 @@ fn Reader::read_stream_record(
     entries,
     length,
     group_count,
+    groups,
     payload: self.input[start:self.pos].to_owned(),
     expires_at_ms: prefix.expires_at_ms,
     idle_seconds: prefix.idle_seconds,
@@ -161,6 +238,13 @@ pub extend StreamEntry with @debug.Debug::{to_repr}
 
 ///|
 pub extend StreamEntry with Eq::{equal, not_equal}
+
+///|
+fn Reader::read_stream_id(self : Reader) -> StreamMessageId raise ParseError {
+  let milliseconds = self.read_unsigned(8, little_endian=false)
+  let sequence = self.read_unsigned(8, little_endian=false)
+  { milliseconds, sequence, }
+}
 
 ///|
 fn Reader::stream_integer(

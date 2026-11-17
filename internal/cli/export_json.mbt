@@ -124,6 +124,7 @@ fn record_json(record : @moonrdb.RdbRecord) -> Json {
     Stream(r) => {
       fields["length"] = Json::string(r.length.to_string())
       fields["group_count"] = Json::string(r.group_count.to_string())
+      fields["groups"] = Json::array(r.groups.map(stream_group_json))
       fields["entries"] = Json::array(
         r.entries.map(e => {
           "milliseconds": Json::string(e.milliseconds.to_string()),
@@ -155,4 +156,43 @@ fn record_json(record : @moonrdb.RdbRecord) -> Json {
     }
   }
   Json::object(fields)
+}
+
+///|
+fn stream_id_json(id : @moonrdb.StreamMessageId) -> Json {
+  {
+    "milliseconds": Json::string(id.milliseconds.to_string()),
+    "sequence": Json::string(id.sequence.to_string()),
+  }
+}
+
+///|
+fn stream_group_json(group : @moonrdb.StreamGroup) -> Json {
+  {
+    "name": binary_json(group.name),
+    "last_delivered_id": stream_id_json(group.last_delivered_id),
+    "entries_read": if group.entries_read == -1L {
+      Json::null()
+    } else {
+      Json::string(group.entries_read.to_string())
+    },
+    "pending_count": Json::string(group.pending_count.to_string()),
+    "consumers": Json::array(
+      group.consumers.map(consumer => {
+        "name": binary_json(consumer.name),
+        "seen_time_ms": Json::string(consumer.seen_time_ms.to_string()),
+        "active_time_ms": Json::string(consumer.active_time_ms.to_string()),
+        "pending_count": Json::string(consumer.pending.length().to_string()),
+        "pending": Json::array(
+          consumer.pending.map(message => {
+            "id": stream_id_json(message.id),
+            "delivery_time_ms": Json::string(
+              message.delivery_time_ms.to_string(),
+            ),
+            "delivery_count": Json::string(message.delivery_count.to_string()),
+          }),
+        ),
+      }),
+    ),
+  }
 }

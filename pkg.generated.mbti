@@ -242,6 +242,16 @@ pub fn SortedSetStorage::equal(Self, Self) -> Bool
 pub fn SortedSetStorage::not_equal(Self, Self) -> Bool
 pub fn SortedSetStorage::to_repr(Self) -> @debug.Repr
 
+pub(all) struct StreamConsumer {
+  name : Bytes
+  seen_time_ms : Int64
+  active_time_ms : Int64
+  pending : Array[StreamPending]
+} derive(Eq, @debug.Debug)
+pub fn StreamConsumer::equal(Self, Self) -> Bool
+pub fn StreamConsumer::not_equal(Self, Self) -> Bool
+pub fn StreamConsumer::to_repr(Self) -> @debug.Repr
+
 pub(all) struct StreamEntry {
   milliseconds : UInt64
   sequence : UInt64
@@ -251,6 +261,34 @@ pub fn StreamEntry::equal(Self, Self) -> Bool
 pub fn StreamEntry::not_equal(Self, Self) -> Bool
 pub fn StreamEntry::to_repr(Self) -> @debug.Repr
 
+pub(all) struct StreamGroup {
+  name : Bytes
+  last_delivered_id : StreamMessageId
+  entries_read : Int64
+  consumers : Array[StreamConsumer]
+  pending_count : UInt64
+} derive(Eq, @debug.Debug)
+pub fn StreamGroup::equal(Self, Self) -> Bool
+pub fn StreamGroup::not_equal(Self, Self) -> Bool
+pub fn StreamGroup::to_repr(Self) -> @debug.Repr
+
+pub(all) struct StreamMessageId {
+  milliseconds : UInt64
+  sequence : UInt64
+} derive(Eq, @debug.Debug)
+pub fn StreamMessageId::equal(Self, Self) -> Bool
+pub fn StreamMessageId::not_equal(Self, Self) -> Bool
+pub fn StreamMessageId::to_repr(Self) -> @debug.Repr
+
+pub(all) struct StreamPending {
+  id : StreamMessageId
+  delivery_time_ms : Int64
+  delivery_count : UInt64
+} derive(Eq, @debug.Debug)
+pub fn StreamPending::equal(Self, Self) -> Bool
+pub fn StreamPending::not_equal(Self, Self) -> Bool
+pub fn StreamPending::to_repr(Self) -> @debug.Repr
+
 pub(all) struct StreamRecord {
   database : UInt64
   key : Bytes
@@ -258,6 +296,7 @@ pub(all) struct StreamRecord {
   entries : Array[StreamEntry]
   length : UInt64
   group_count : UInt64
+  groups : Array[StreamGroup]
   payload : Bytes
   expires_at_ms : Int64?
   idle_seconds : UInt64?

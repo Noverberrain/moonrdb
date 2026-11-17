@@ -46,8 +46,20 @@ pub async fn run(args : ArrayView[String]) -> Int32 {
       @stdio.stdout.text.write(usage())
       0
     }
-    Diff(before~, after~, max_input_bytes~, db~, prefix~, limit~) => {
-      let report = diff_files(before, after, max_input_bytes, db, prefix, limit) catch {
+    Diff(
+      before~,
+      after~,
+      max_input_bytes~,
+      db~,
+      prefix~,
+      limit~,
+      jsonl~,
+      group_by_db~,
+      group_prefixes~
+    ) => {
+      let report = diff_files(
+        before, after, max_input_bytes, db, prefix, limit, jsonl, group_by_db, group_prefixes,
+      ) catch {
         error => {
           @stdio.stderr.text.write("moonrdb: diff failed: \{repr(error)}\n")
           return 1

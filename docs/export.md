@@ -58,3 +58,9 @@ stdout 无法事务回滚，输出失败时可能留下合法 JSONL 前缀；调
 Windows native 155 项 MoonBit 测试、85 项通用 CLI 进程检查、39 项导出进程检查通过。导出检查将七份真实快照的所有记录经 Python 标准库 JSON/Base64/IEEE 解码，与 expected.json 逐键核对，覆盖五种类型、二进制、宽整数、极端毫秒、负零及无穷、UTF-8 过滤、原始 List 顺序、Set／Hash 无序语义、stdout 与文件结果一致、失败保护和目录清理。
 
 完整本地检查为 `./scripts/ci.ps1`。库根包公开接口未改变，仅 CLI 包增加功能；远端 Actions、Mooncakes 发布及仓库外消费者验收留待 F12。
+
+## Stream 消费状态
+
+当前源码在 Stream 记录中新增 groups 数组。每组包含组名、最后投递 ID、已读条目数、待确认总数和消费者列表。消费者节点包含名称、seen_time_ms、active_time_ms 和归属该消费者的 pending 列表。每个待确认项保留消息 ID、最近投递时间和投递次数。
+
+组名和消费者名使用与键相同的 Base64 对象。ID 的两个分量、计数和时间使用十进制字符串，Redis 的未知 entries_read 在 JSONL 中显示为 null。待确认消息可以已经从 Stream 删除，因此仍会出现在 pending 中。待确认数反映快照保存时已经投递且尚未确认的消息数。Mooncakes 0.2.0 可读取 Stream 的消息和组数，groups 属于发布后的源码扩展。

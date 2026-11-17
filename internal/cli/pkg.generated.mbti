@@ -28,7 +28,7 @@ pub fn UsageError::to_repr(Self) -> @debug.Repr
 // Types and methods
 pub(all) enum Command {
   Help
-  Diff(before~ : String, after~ : String, max_input_bytes~ : Int32, db~ : UInt64?, prefix~ : String?, limit~ : Int32)
+  Diff(before~ : String, after~ : String, max_input_bytes~ : Int32, db~ : UInt64?, prefix~ : String?, limit~ : Int32, jsonl~ : Bool, group_by_db~ : Bool, group_prefixes~ : Array[String])
   Export(path~ : String, max_input_bytes~ : Int32, db~ : UInt64?, prefix~ : String?, output~ : String?)
   Top(path~ : String, max_input_bytes~ : Int32, limit~ : Int32)
   Stats(path~ : String, max_input_bytes~ : Int32, at_ms~ : Int64?, prefixes~ : Array[String])

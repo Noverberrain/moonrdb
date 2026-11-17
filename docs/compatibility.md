@@ -65,7 +65,7 @@ F8 已实现 Windows native `inspect`，使用同一解析 API 检查整个文�
 
 ### Stream 与函数库
 
-Stream 解码消息 ID 和有序字段对，保留重复字段及二进制值。删除项用于结构核对，导出的消息列表包含现存消息。解析器读取消费组、消费者和全局／本地待确认列表（PEL），检查 ID 引用。组数和原始 Stream 负载随记录保留，JSONL 将原始负载编码为 Base64。inspect、stats、top、diff 均可分析整库，Stream 的内容对比基于现存消息。
+Stream 解码消息 ID 和有序字段对，保留重复字段及二进制值。删除项用于结构核对，导出的消息列表包含现存消息。解析器读取消费组、消费者和全局／本地待确认列表（PEL），检查 ID 引用。组数和原始 Stream 负载随记录保留，JSONL 将原始负载编码为 Base64。当前源码还提供结构化消费组、消费者和待确认消息，保留消息归属、最近投递时间和投递次数。inspect、stats、top、diff 均可分析整库，Stream 的内容对比基于现存消息。
 
 FUNCTION2 按带长度的 RDB 字符串读取，保存在 Snapshot.function_libraries。inspect 报告库数，函数库字节计入全局开销。键级 JSONL 仅导出键记录，Lua 源码在库接口中按字节保留。模块对象、模块辅助段、旧式 Stream 编码及未知标记明确报错。 [Redis 7.2.5 RDB 源码](https://github.com/redis/redis/blob/7.2.5/src/rdb.c)
 
