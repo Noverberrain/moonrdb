@@ -65,3 +65,18 @@ test "prefix matching is binary safe including empty and Unicode" {
   assert_false(bytes_prefix(b"x", b"xx"))
   assert_true(bytes_prefix(@utf8.encode("用户:1"), @utf8.encode("用户:")))
 }
+
+///|
+test "Stream without consumer groups still contributes to database totals" {
+  let snapshot = @moonrdb.parse(
+    b"REDIS0011\x15\x01s" + b"\x00".repeat(10) + b"\xff" + b"\x00".repeat(8),
+  )
+  let report = stats_report(snapshot)
+  assert_true(
+    report.contains(
+      "db 0 stream_state: streams=1 groups=0 consumers=0 pending=0",
+    ),
+  )
+  assert_false(report.contains("stream_group "))
+  assert_true(report.contains("accounting_matches: true"))
+}

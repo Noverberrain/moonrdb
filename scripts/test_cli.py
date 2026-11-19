@@ -77,7 +77,11 @@ def main():
     stream_file = root / "fixtures/redis-7.2.5-streams/streams.rdb"
     report = run(["inspect", stream_file], 0, stdout_contains="function_libraries: 1")
     assert "keys: 3" in report and "checksum: valid" in report
-    run(["stats", stream_file], 0, stdout_contains="db 0 type Stream: keys=2")
+    stream_stats = run(["stats", stream_file], 0, stdout_contains="db 0 type Stream: keys=2")
+    assert "db 0 stream_state: streams=2 groups=2 consumers=2 pending=3" in stream_stats
+    assert "key_base64=c3RyZWFt group_base64=Z3JvdXA= consumers=2 pending=3" in stream_stats
+    assert "key_base64=ZW1wdHktc3RyZWFt group_base64=ZW1wdHktZ3JvdXA= consumers=0 pending=0" in stream_stats
+    assert run(["stats", stream_file, "--prefix", "missing"], 0).split("db 0 stream_state:")[1].splitlines()[0] == stream_stats.split("db 0 stream_state:")[1].splitlines()[0]
     run(["top", stream_file], 0, stdout_contains="type=Stream encoding=Listpacks3 entries=3")
     run(["diff", stream_file, stream_file], 0, stdout_contains="returned: 0")
 

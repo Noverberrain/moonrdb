@@ -60,6 +60,7 @@ pub fn stats_report(
       "db \{db} type \{kind}: keys=\{count} serialized_bytes=\{bytes} with_expiry=\{expires} permanent=\{count - expires}\n",
     )
   }
+  append_stream_stats(out, snapshot.records)
   for i in 0..<prefixes.length() {
     let (n, bytes, expires) = prefix_counts[i]
     out.write_string(
@@ -124,5 +125,55 @@ fn ttl_bucket(expiry : Int64?, at : Int64) -> Int32 {
     5
   } else {
     6
+  }
+}
+
+///|
+fn append_stream_stats(
+  out : StringBuilder,
+  records : Array[@moonrdb.RdbRecord],
+) -> Unit {
+  let totals : Map[UInt64, (UInt64, UInt64, UInt64, UInt64)] = Map([])
+  let rows : Array[(UInt64, String, String, Int32, UInt64)] = []
+  for record in records {
+    guard record is Stream(stream) else { continue }
+    let (streams, groups, consumers, pending) = totals
+      .get(stream.database)
+      .unwrap_or((0UL, 0UL, 0UL, 0UL))
+    let mut consumer_count = 0UL
+    let mut pending_count = 0UL
+    for group in stream.groups {
+      consumer_count += group.consumers.length().to_uint64()
+      pending_count += group.pending_count
+      rows.push(
+        (
+          stream.database,
+          @base64.encode(stream.key[:]),
+          @base64.encode(group.name[:]),
+          group.consumers.length(),
+          group.pending_count,
+        ),
+      )
+    }
+    totals[stream.database] = (
+      streams + 1UL,
+      groups + stream.groups.length().to_uint64(),
+      consumers + consumer_count,
+      pending + pending_count,
+    )
+  }
+  let databases = totals.keys().collect()
+  databases.sort()
+  for database in databases {
+    let (streams, groups, consumers, pending) = totals[database]
+    out.write_string(
+      "db \{database} stream_state: streams=\{streams} groups=\{groups} consumers=\{consumers} pending=\{pending}\n",
+    )
+  }
+  rows.sort()
+  for (database, key, group, consumers, pending) in rows {
+    out.write_string(
+      "stream_group db=\{database} key_base64=\{key} group_base64=\{group} consumers=\{consumers} pending=\{pending}\n",
+    )
   }
 }
