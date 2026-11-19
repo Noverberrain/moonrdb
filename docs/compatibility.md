@@ -49,11 +49,11 @@ F7 支持二进制 double 与 listpack Sorted Set，核对配对、成员唯一�
 | SELECTDB / RESIZEDB | 254 / 251 | F2/F3 | 合成测试与真实 DB 0 / 2 的 String 样本通过 |
 | EXPIRETIME / EXPIRETIME_MS | 253 / 252 | F2/F3 | 毫秒时间有真实 String 样本；旧秒编码仅有小端合成测试 |
 | IDLE / FREQ | 248 / 249 | F2/F3/F4 | IDLE 有真实 String 样本；FREQ 有真实 Hash 样本 |
-| EOF 与 CRC64 | 255 + 8 字节校验和 | F2—F7 | 七份真实快照通过；有效与关闭状态可区分，损坏／截断被拒绝 |
+| EOF 与 CRC64 | 255 + 8 字节校验和 | F2—F7 | 八份真实快照通过；有效与关闭状态可区分，损坏／截断被拒绝 |
 | FUNCTION2 | 245 | 本期支持 | 保留函数库原始字节 |
 | FUNCTION_PRE_GA / MODULE_AUX | 246 / 247 | 范围外 | 明确报错 |
 
-样本来源、SHA256 和复现方式见 [fixtures/README.md](../fixtures/README.md)。Python 离线验证核对样本身份和预期数据；MoonBit 测试解析两份空库与五份有键快照，检查语义、实际编码及校验状态。
+样本来源、SHA256 和复现方式见 [fixtures/README.md](../fixtures/README.md)。Python 离线验证核对样本身份和预期数据；MoonBit 测试解析两份空库与六份有键快照，检查语义、实际编码及校验状态。
 
 ## 工具链与执行环境
 
@@ -61,7 +61,7 @@ F0 在 Windows x64、`moonc 0.10.18+6c83a7f62`、`moon 0.1.20261028` 下验证 n
 
 ## inspect CLI
 
-F8 已实现 Windows native `inspect`，使用同一解析 API 检查整个文件并显示版本、数据库、键数和校验状态；参数和退出行为见 [inspect.md](inspect.md)。stats 已实现，含前缀汇总和指定时刻的 TTL 分布，见 [stats.md](stats.md)；top 已实现，见 [top.md](top.md)；export 已实现，见 [export.md](export.md)。解析库根包 API 保持 F7 不变，新增系统依赖仅位于 CLI 包。
+F8 已实现 Windows native `inspect`，使用同一解析 API 检查整个文件并显示版本、数据库、键数和校验状态；参数和退出行为见 [inspect.md](inspect.md)。stats 已实现，含前缀汇总和指定时刻的 TTL 分布，见 [stats.md](stats.md)；top 已实现，见 [top.md](top.md)；export 已实现，见 [export.md](export.md)。0.2.0 的库接口新增 Stream、InvalidStream 和 Snapshot.function_libraries，升级说明见 release.md。
 
 ### Stream 与函数库
 

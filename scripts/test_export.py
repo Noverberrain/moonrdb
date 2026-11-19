@@ -62,6 +62,15 @@ def main():
                 assert set(map(binary, r["members"])) == set(map(b64, e["members_base64"]))
             elif e["type"] == "stream":
                 assert int(r["length"]) == e["length"]
+                if e["length"]:
+                    assert r["last_generated_id"] == {"milliseconds": "102", "sequence": "0"}
+                    assert r["first_entry_id"] == {"milliseconds": "100", "sequence": "0"}
+                    assert r["max_deleted_entry_id"] == {"milliseconds": "101", "sequence": "0"}
+                    assert r["entries_added"] == "4"
+                else:
+                    for field in ("last_generated_id", "first_entry_id", "max_deleted_entry_id"):
+                        assert r[field] == {"milliseconds": "0", "sequence": "0"}
+                    assert r["entries_added"] == "0"
                 assert int(r["group_count"]) == e["groups"]
                 actual = [[x["milliseconds"] + "-" + x["sequence"],
                            [pair[name]["data"] for pair in x["fields"] for name in ("field", "value")]]
@@ -129,6 +138,14 @@ def main():
         row = json.loads(run([copy, "--db", "18446744073709551615"]).stdout)
         assert row["database"] == "18446744073709551615" and row["expires_at_ms"] == "-9223372036854775808"
         assert row["entries"][0]["score_bits_u64"] == "9223372036854775808"
+        wide = bytes([0x81]) + bytes([255]) * 8
+        # Empty stream with metadata IDs/counters above JavaScript integer precision.
+        body = b"\x15\x01s\x00\x00" + wide * 7 + b"\x00"
+        copy.write_bytes(b"REDIS0011" + body + b"\xff" + bytes(8))
+        row = json.loads(run([copy]).stdout)
+        for field in ("last_generated_id", "first_entry_id", "max_deleted_entry_id"):
+            assert row[field] == {"milliseconds": "18446744073709551615", "sequence": "18446744073709551615"}
+        assert row["entries_added"] == "18446744073709551615"
         copy.write_bytes(b"REDIS0011\x00\x08" + "用户:1".encode() + b"\x01v\xff" + bytes(8))
         assert binary(json.loads(run([copy, "--prefix", "用户:"]).stdout)["key"]) == "用户:1".encode()
     print(f"JSONL export: {checks} process checks passed; all fixture records round-tripped.")

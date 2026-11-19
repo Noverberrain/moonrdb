@@ -64,3 +64,7 @@ Windows native 155 项 MoonBit 测试、85 项通用 CLI 进程检查、39 项�
 当前源码在 Stream 记录中新增 groups 数组。每组包含组名、最后投递 ID、已读条目数、待确认总数和消费者列表。消费者节点包含名称、seen_time_ms、active_time_ms 和归属该消费者的 pending 列表。每个待确认项保留消息 ID、最近投递时间和投递次数。
 
 组名和消费者名使用与键相同的 Base64 对象。ID 的两个分量、计数和时间使用十进制字符串，Redis 的未知 entries_read 在 JSONL 中显示为 null。待确认消息可以已经从 Stream 删除，因此仍会出现在 pending 中。待确认数反映快照保存时已经投递且尚未确认的消息数。Mooncakes 0.2.0 可读取 Stream 的消息和组数，groups 属于发布后的源码扩展。
+
+### Stream 生命周期元数据
+
+当前源码新增 last_generated_id、first_entry_id、max_deleted_entry_id 和 entries_added。它们分别表示最后生成的消息 ID、首条现存消息 ID、最大已删除消息 ID 及累计新增条目数，取自快照保存的元数据。删除消息后 entries_added 可以大于 length。ID 仍采用 milliseconds 和 sequence 两个十进制字符串，entries_added 同样用字符串保存 UInt64 精度。空流也保留原始元数据。这些字段属于 0.2.0 发布后的源码扩展。

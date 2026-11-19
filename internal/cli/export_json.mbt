@@ -123,6 +123,10 @@ fn record_json(record : @moonrdb.RdbRecord) -> Json {
     }
     Stream(r) => {
       fields["length"] = Json::string(r.length.to_string())
+      fields["last_generated_id"] = stream_id_json(r.last_generated_id)
+      fields["first_entry_id"] = stream_id_json(r.first_entry_id)
+      fields["max_deleted_entry_id"] = stream_id_json(r.max_deleted_entry_id)
+      fields["entries_added"] = Json::string(r.entries_added.to_string())
       fields["group_count"] = Json::string(r.group_count.to_string())
       fields["groups"] = Json::array(r.groups.map(stream_group_json))
       fields["entries"] = Json::array(

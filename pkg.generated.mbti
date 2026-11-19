@@ -294,6 +294,10 @@ pub(all) struct StreamRecord {
   key : Bytes
   key_storage : StringStorage
   entries : Array[StreamEntry]
+  last_generated_id : StreamMessageId
+  first_entry_id : StreamMessageId
+  max_deleted_entry_id : StreamMessageId
+  entries_added : UInt64
   length : UInt64
   group_count : UInt64
   groups : Array[StreamGroup]

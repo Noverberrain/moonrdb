@@ -7,6 +7,10 @@ pub(all) struct StreamRecord {
   key : Bytes
   key_storage : StringStorage
   entries : Array[StreamEntry]
+  last_generated_id : StreamMessageId
+  first_entry_id : StreamMessageId
+  max_deleted_entry_id : StreamMessageId
+  entries_added : UInt64
   length : UInt64
   group_count : UInt64
   groups : Array[StreamGroup]
@@ -125,10 +129,10 @@ fn Reader::read_stream_record(
   if length != entries.length().to_uint64() {
     raise InvalidStream(offset=start, reason="stream length mismatch")
   }
-  // Last ID, first ID, maximal deleted ID, and lifetime entries added.
-  for _ in 0..<7 {
-    ignore(self.read_count())
-  }
+  let last_generated_id = self.read_stream_metadata_id()
+  let first_entry_id = self.read_stream_metadata_id()
+  let max_deleted_entry_id = self.read_stream_metadata_id()
+  let entries_added = self.read_count()
   let group_count = self.read_count()
   self.require(group_count)
   let groups = []
@@ -214,6 +218,10 @@ fn Reader::read_stream_record(
     key_storage: key.storage,
     entries,
     length,
+    last_generated_id,
+    first_entry_id,
+    max_deleted_entry_id,
+    entries_added,
     group_count,
     groups,
     payload: self.input[start:self.pos].to_owned(),
@@ -353,4 +361,14 @@ fn read_stream_node(
     (declared != 65535 && declared != elements) {
     raise InvalidStream(offset~, reason="stream listpack count mismatch")
   }
+}
+
+///|
+// Metadata IDs use two RDB lengths; node and PEL IDs use fixed-width bytes.
+fn Reader::read_stream_metadata_id(
+  self : Reader,
+) -> StreamMessageId raise ParseError {
+  let milliseconds = self.read_count()
+  let sequence = self.read_count()
+  { milliseconds, sequence, }
 }
